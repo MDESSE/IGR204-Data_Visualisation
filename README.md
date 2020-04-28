@@ -31,6 +31,8 @@ During the first lab or immediately after, you should form your groups of 4–5 
 
 Explore the available datasets, paying attention to how many cases there are, how many variables, and of what types. Think about what these data might encode. Find a dataset that interests you. For any successful project, *at least* one member of the group should be passionate about the data.
 
+https://perso.telecom-paristech.fr/eagan/class/igr204/datasets
+
 # M1: Project description
 
 An up-to 1 page document with:
