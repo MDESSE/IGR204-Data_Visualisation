@@ -3,9 +3,16 @@
 ## **Milestone 1 : project description**
 
 
+<<<<<<< HEAD
 **Project members :** Axel CAMARA, François CULIERE, Matthieu DESSE, Vincent RICHARD et Hiroto YAMAKAWA.
 
 **Topic :** 
+=======
+
+**Project members :** Axel CAMARA, François CULIERE, Matthieu DESSE, Vincent RICHARD and Hiroto YAMAKAWA.
+
+**Topic :**
+>>>>>>> project_structure
 
 **Datasets (source, format) :**
 
