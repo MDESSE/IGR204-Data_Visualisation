@@ -4,9 +4,11 @@
 
 
 
-**Project members :** Axel CAMARA, François CULIERE, Matthieu DESSE, Vincent RICHARD et Hiroto YAMAKAWA.
+**Project members :** Axel CAMARA, François CULIERE, Matthieu DESSE, Vincent RICHARD and Hiroto YAMAKAWA.
 
-**Topic :****Datasets (source, format) :**
+**Topic :**
+
+**Datasets (source, format) :**
 
 **Objectives :**
 
