@@ -1,21 +1,12 @@
-# <center> How to Make a successful movie
+# How to Make a successful movie
 
-**<center> Group Q  : Axel CAMARA, François CULIERE, Matthieu DESSE, Vincent RICHARD and Hiroto YAMAKAWA**
+**Group Q  : Axel CAMARA, François CULIERE, Matthieu DESSE, Vincent RICHARD and Hiroto YAMAKAWA**
 
 At first, it is essential to define what is a successful movie. 
 
-Several intuition axis :
-
-- box-office,
-- incomes,
-- difference between incomes and budget,
-- rates on secific web sites (*imdb*, *allociné*),
-- Does a blockbuster is a successful movie (high budget, low to high incomes) ?
-  - https://en.wikipedia.org/wiki/Blockbuster_(entertainment)
+Several intuition axis : box-office, incomes, difference between incomes and budget, rates on secific web sites (*imdb*, *allociné*), does a blockbuster is a successful movie (high budget, low to high incomes) ?
 
 We will use all these metrics with other else to answer to this question.
-
-
 
 ### A description of the problem
 
