@@ -24,7 +24,11 @@ I have imagined a simple web page as an infography that we can scroll. We have f
 
 These two previous points imply that we adopt more  an explanatory visualisation than exploration view.
 
-![97926079_765187594020939_5748508246147072000_n](/home/mde/Downloads/97926079_765187594020939_5748508246147072000_n.jpg)
+
+
+<img src='img/MDE_proposition.jpg'></img>
+
+
 
 
 
@@ -32,6 +36,6 @@ These two previous points imply that we adopt more  an explanatory visualisation
 
 ## Another idea :
 
-
+Another original view
 
 ![img](https://toucantoco.com/blog/wp-content/uploads/2018/04/Taxonomy_of_Ideas.png)
