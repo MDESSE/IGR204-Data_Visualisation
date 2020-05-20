@@ -1,5 +1,38 @@
 # IGR204-Data_Visualisation
 
+
+
+# Team Members
+
+<table class="tg">
+  <tr>
+    <th class="tg-amwm">Name</th>
+    <th class="tg-amwm">Github</th>
+  </tr>
+  <tr>
+    <td class="tg-baqh">Axel CAMARA</td>
+    <td class="tg-baqh"><a href="https://github.com/aksl20">Aksl20</a></td>
+  </tr>
+  <tr>
+    <td class="tg-baqh">François Culière </td>
+    <td class="tg-baqh"><a href="https://github.com/francouee">francouee</a></td>
+  </tr>
+  <tr>
+    <td class="tg-baqh">Matthieu Desse</td>
+    <td class="tg-baqh"><a href="https://github.com/MDESSE">MDESSE</a></td>
+  </tr>
+  <tr>
+    <td class="tg-baqh">Vincent RICHARD</td>
+    <td class="tg-baqh"><a href="http://github.com/vincrichard">vincrichard</a></td>
+  </tr>
+  <tr>
+    <td class="tg-baqh">Hiroto YAMAKAWA</td>
+    <td class="tg-baqh"><a href="http://github.com/yamhiroto">yamhiroto</a></td>
+  </tr>
+</table>
+
+
+
 # Objectives
 
 The goal of this project is to give you some hands-on experience with creating a fully-functional interactive information visualization. This consists of several components: understanding the user of the visualization, what kinds of tasks he or she is trying to perform with the visualization, what is his or her background and expertise, and what kind of data we’re dealing with.
@@ -10,6 +43,8 @@ In this project, you will develop a high-quality, interactive visualization that
 
 This is not a programming project, but it is a project that will involve programming. Interaction plays an essential role in visualization, and it is difficult to understand the interaction in a visualization without a running system. You will be evaluated based on your creativity, how well you are able to describe the analytic tasks your system aims to support, and on the functionality of your visualization prototype. You will not be evaluated directly on the quality of the code you write.
 
+
+
 # Milestones
 
 1. Group formation, choice of dataset.
@@ -19,11 +54,15 @@ This is not a programming project, but it is a project that will involve program
 5. Project presentations and demos.
 6. Project reports.
 
+
+
 # Project grading
 
 - 40% — Demo & Code
 - 40% — Report
 - 20% — Poster
+
+
 
 # M0: Group and dataset
 
@@ -32,6 +71,8 @@ During the first lab or immediately after, you should form your groups of 4–5 
 Explore the available datasets, paying attention to how many cases there are, how many variables, and of what types. Think about what these data might encode. Find a dataset that interests you. For any successful project, *at least* one member of the group should be passionate about the data.
 
 https://perso.telecom-paristech.fr/eagan/class/igr204/datasets
+
+
 
 # M1: Project description
 
@@ -51,6 +92,8 @@ Choose one member of the group to submit this milestone. Be sure to *use a legib
 
 [moodle: https://ecampus.paris-saclay.fr/course/view.php?id=8391
 
+
+
 # M2: Design document
 
 By this point, you should have had more time to explore your data and to get a better understanding of your users. You should also have brainstormed potential designs. Your design document will show three different design alternatives that you have considered, followed by a description of the “final” design that you intend to implement.
@@ -64,6 +107,8 @@ I am expecting to see three distinct, fully-thought-out design ideas. Draw sketc
 We are looking for a breadth of different design directions as well as a *thoughtful* analysis of your different designs and how you ended up with your final design.
 
 [Submit your design document in the moodle][moodle].
+
+
 
 # M4: Poster Presentation and demo
 
@@ -84,6 +129,8 @@ Each group will present a demo and poster of their prototype in the main hall of
 That’s a lot of content there for a single poster. Remember, the poster will probably be primarily visual, but you’ll also need to use some text to help guide and orient the reader.
 
 We will hold a virtual poster session this year using Mozilla Hubs. See the [moodle][] for further details.
+
+
 
 # M5: Report
 
@@ -112,6 +159,8 @@ Your report should cover the following topics. I am looking for thoughtful refle
 Reports will probably be somewhere around 10–20 pages, but that’s not a target: use the space that you feel is justified to cover all of these topics. Feel free to write a longer report that includes a lot of images. Be sure to use a legible, serif font at a reasonable size (10-12 point) with reasonable margins.
 
 [Submit your report in the moodle][moodle].
+
+
 
 # M5 bis: Individual contribution statement
 
