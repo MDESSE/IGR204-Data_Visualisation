@@ -161,6 +161,7 @@ To avoid the tedious task of  scrolling back and forth to change settings and se
 
 
 
+# Final design
 
-
+<img src='img/final-design.jpg' style='border: solid 1px;'>
 
