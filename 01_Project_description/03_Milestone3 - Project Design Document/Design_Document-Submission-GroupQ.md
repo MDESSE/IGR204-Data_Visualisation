@@ -8,6 +8,34 @@ Several metrics and information will be used , such as box-office admission, inc
 
 For the second milestone, we propose to compare 4 different visualisations for a same dataset. It is obvious to say that it exists as much as different interlocutors than possible visualisations. But thanks to this exercise, we will find common ideas between graphs to build the best visualisation.
 
+## 0. Data exploration
+
+We chose a first dataset based on [The Movie Database (TMDb)](https://www.kaggle.com/tmdb/themoviedb.org) to begin our exploration. This dataset contains 5000 entries of movies with several attributs:
+- movie's description (name, genre, overview, runtime, release date) 
+- The names of actors and people in the production team.
+- The movie's popularity
+- The actors' popularity
+- The production companies and countries
+- People's ratings
+
+ By a quick look on the data, we could extract some statistics. This dataset contains:
+ - 50815 unique actors
+ - 10808 unique production companies
+ - 88 unique countries 
+ 
+ ![movies_distribution](https://github.com/MDESSE/IGR204-Data_Visualisation/blob/master/01_Project_description/03_Milestone3%20-%20Project%20Design%20Document/img/movies_distribution.png)
+ 
+ ![companies_distribution](https://github.com/MDESSE/IGR204-Data_Visualisation/blob/master/01_Project_description/03_Milestone3%20-%20Project%20Design%20Document/img/companies_distribution.png)
+ 
+ The two previous barplots show the distribution of movies and companies across the countries. Our dataset is mainly focus on the USA movies. This could be a limit for our us and we may find additional data.
+ 
+![top_100](https://github.com/MDESSE/IGR204-Data_Visualisation/blob/master/01_Project_description/03_Milestone3%20-%20Project%20Design%20Document/img/top_100_most_producing_companies.png)
+ 
+ ![100_random](https://github.com/MDESSE/IGR204-Data_Visualisation/blob/master/01_Project_description/03_Milestone3%20-%20Project%20Design%20Document/img/100_random_companies.png)
+ 
+ This two barplots show the number of movies produced by production companies. The color is link to the production country. We see clearly the ranking between the countries based on the number of movie produced.
+ 
+
 ## 1. Select a design requirement
 
 To answer this question, we want our visualization to follow the Shneiderman's mantra :
