@@ -1,78 +1,174 @@
-# Milestone 2 : Design Document
+#  Milestone 2 : Design Document
 
 **Group Q : Axel CAMARA, François CULIERE, Matthieu DESSE, Vincent RICHARD and Hiroto YAMAKAWA**
 
-Let's quickly remind our subject for this data visualisation project. We will try to understand what it makes a successful movie. We will answer to this question through the exploration of our dataset enhanced by external sources (Iothers kaggle..mdb, Numbers, ...)
+Through this visualization, we intend to explore and understand what are the main characteristics of a successful movie.   
 
-For this Milestone 2, we propose to compare 4 different visualisation for a same dataset. It is obvious to say that it exists as much as different interlocutors than possible visualisation. But thanks to this exercise, we will try to hightlight that and find common ideas between graphs to build the best visualisation.
+Several metrics and information will be used , such as box-office admission, incomes, difference between incomes and production budget, ratings on specific websites (*imdb*, *allociné*). 
 
+For the second milestone, we propose to compare 4 different visualisations for a same dataset. It is obvious to say that it exists as much as different interlocutors than possible visualisations. But thanks to this exercise, we will find common ideas between graphs to build the best visualisation.
 
+## 1. Select a design requirement
 
-## 1. Let's compare our visualisations
+To answer this question, we want our visualization to follow the Shneiderman's mantra :
 
-### 1.1. Sketch 1
-
-<img src='img/sketch1.jpg' style="zoom: 20%;" ></img>
-
-We have 2 parts on this visualisation. 
-
-The first one proposed to show the impact of budget on the film. For that, we plot a scatter plot with a little interaction. When we hove the moose on the point, some film characteristics appears. With this simple visualisation, we can quickly the link between ratings and budget. However,  it is difficult to have a overview. Therefore, we have the second part. 
-
-This one is little bit tricky. Indeed, we have a alluvial diagram which plot specific ways of data depending on the search filters. This diagram may more complex but it especially contains more information. Indeed, the interactivity allow to the user to apply its own filters and discovers the impact of the characteristics about the success of the film
+>  "**Overview First, zoom and filter, then details-on-demand**" 
 
 
 
-### 1.2. Sketch 2 
+Since the dataset is rich and contains diverse type of information,  the **funnel approach** seems to be the best to dive into it : begin from **an overview** and gradually move onto **a focused view** of a specific characteristic. Indeed, once main characteristics have been identified, we will have tools to navigate among them and to dive deeper in the details.
 
-<img src="img/wordcloud.PNG" alt="wordcloud-sketch1" style="zoom: %;" />![choropleth_map](img/choropleth_map.jpg)
+The second objective will be to propose alternative views thanks to interactivity. Perhaps, some users might have their own idea of what success is, and some flexibility will be required to adapt to their preference. Thanks to interactivity, the user experience is custom-made.
 
-Here, we have also 2 parts.
 
-The first one is an overview of our dataset. It is interesting because we project our dataset through word bag in which the word size corresponds to its importance or impact related to our issue. Moreover, we added to cursor to observe the impact of 2 characteristics (here ratings and popularity).
 
-The second visualisation is a world map which shows the geographical competition and dependence in the film industry. We added too some filters to custom the search. 
+Below are some questions we asked ourselves to design the sketch:
 
-A drawback of these visualisations is its complexity. Indeed, it proposed a simple support but the data engineering may be complex. For instance,  it is not easy to represent categorical features on the word bags. Moreover, how we can represent data on a map, when a film is filmed in several locations around the world ? 
+- How to keep it simple ?
+- How to organise visualisation in order to follow the idea of funnel ? From the global to detailed views.
+
+- How to allow the user to explore the dataset based on his/her own perception of success ?
+
+- How to represent various type of information so that they can be better understood by the user ?
+
+- How to keep a sense of space and time ?
+- How to set interactivity with radio button, sliders ?
+
+
+
+## 2. Sketching our ideas
+
+Fueled with creative inspirations, we started to sketch potential designs and ended with the 3 following ideas :
+
+
+
+### Design idea no.1 
+
+<img src='img/proposition_Francois.png'></img>
+
+
+
+From a user perspective, exploring the dataset means being able to **select and compare movies**, from a macro or detailed  point of view. 
+
+1) the **scatterplot** gives the ability to **compare** movies  :
+
+- features displayed on both axes  can be changed to compare different criteria (the number of feature pairs are not limitless, but still really high to keep the user engaged)
+
+- the user can hover on the data point displayed to select a specific movie and get more information on it
+
+- is suited for a detailed exploration analysis 
+
+  
+
+2) the **affluvial graph** on the other hand is useful to **select** movies :
+
+- to filter movies can be filtered based on several criteria that 
+- to find group of movies sharing common feature
+- intended to give a higher view on the movie data.
+
+To enhance the user experience, selecting information on one graph will also append instantly the information displayed on the other graph 
+
+
+
+### Design idea no.2
+
+
+
+<img src='img/proposition_Axel.png'></img>
+
+<img src='img/proposition_Axel2.png'></img>
+
+
+
+the above design includes a **word cloud** and a **choropleth map**:
+
+- The cloud appeals for its simplicity, emphasizing recurrent information, allowing us to draw a profile for successful movies. The user will be able to change the word cloud by manipulating two cursors : popularity and ratings (maybe budget/incomes ?). Users could see easily what concepts are hiding behind a good movies. 
+
+- Since some features were related to geographical locations, Displaying them on a Map seemed to be the most appropriate way to visualize those data. 
+
+
+A drawback of these visualisations is its complexity. Indeed, it proposed a simple support but the data engineering may be complex. For instance,  it is not easy to represent categorical features on the word bags. Moreover, how we can represent data on a map, when a film is filmed in several locations around the world ? Regarding to distribution of production country, most of these are american. Therefore it seems tricky to use map to represent some information from the dataset. 
 
 These representations are clear but we need to find the appropriate metrics to deliver the right message.
 
 
 
-### 1.1. Sketch 3
+Another original view that can be explored:
 
-<img src="Idée Viz - Hiro.jpg" style="zoom: 30%;"></img>
-
-This visualisation proposes to observe the evolution of characteristics over time. Thanks to the slider, we have two kind of interaction : "static" and dynamic. Indeed, static corresponds to year selection and dynamic a scroll the slide button. Contrary to the previous visualisations, this one introduces the time dimension. With other filters, we can custom the search. To enhance it we can add some search filters.
+![img](https://toucantoco.com/blog/wp-content/uploads/2018/04/Taxonomy_of_Ideas.png)
 
 
 
-### 1.2. Sketch 4 
-
-<img src='img/MDE_proposition.jpg' style="zoom: 20%;" ></img>
 
 
+### Design Idea no.3
 
-This representation proposes a funnel approach : begin from an overview to a focused view of a specific characteristic. The second objective will be to propose alternative views thanks to interactivity. Indeed, once main characteristics identified, we will develop tools to navigate among its.
 
-We have imagined a simple web page as an infography that we can scroll. We have four parts :
+
+<img src='img/proposition_Hiro.jpg'></img>
+
+
+
+The last representation is a **horizontal bar graph**:
+
+- Its purpose is to include a **notion of evolution within time** : it will help the user compare movies based on a specific criteria, and see how the ranking evolves with time.  A specific genre,  criteria, and a year can be selected to see "the top 10" based on them.
+
+  E.g.  which movies were the most expensive, or had the highest ROI, which genres were the most produced..
+
+
+
+# Building our final Design
+
+As previously stated, the 3 important ideas that had to be maintained was :
+
+- The funnel approach, a.k.a  Shneiderman's mantra 
+- and a personalized experience through the interactive tools, giving the user the freedom to explore different aspects of the dataset, based on his/her needs and preferences
+- a good user experience overall
+
+After brainstorming, exchanging, debating the pros and cons, we ended up with the following unified design. The two points above led us to adopt an explanatory visualization rather than exploration view.
+
+
+
+**Here is what our final project will look like**:
+
+the whole visualization will fit in a single web page, as an interactive infography. The user will be able to scroll to see the different sections  . We have four parts :
 
 - Overview : explore main characteristics
-- Approach explanation with our custom metrics (financial, popularity, both, ...)
+- Explicative/Exploratory approach with our custom metrics (financial, popularity, both, ...)
 - Geographical view
 - Custom view : e.g. actresses/actors bankable or attractive
 
-2 important ideas :
 
-- The funnel approach
-- and the personalised experience through the interactive tools.
 
-These two previous points imply that we adopt more an explanatory visualisation than exploration view.
+**Explanation :**
 
-## 2. Trade-offs and final proposition
+As a reader of this document, you may be surprised that we decided to gather the different designs previously sketched, (partly or as a whole)  rather than selecting only one of them. 
 
-After comparing these visualisations, we have decided to :
+Indeed, we saw them as being complementary to each other,  each visualization being a unique component of our design and covering some weaknesses of an other graph:
 
-- adopt a funnel approach : begin from an overview to a focused view of a specific characteristic (word bags to the map or scatter plot)
-- use the alluvial diagram as super filters. The user could select specific ranges,
-- integrate the time dimension to see the impact of time about our issue,
-- use interactivity (animation and search filters) to custom the user experience.
+- The scatter plot provides detailed information on movies but on its own, it might put off users for its perceived complexity. 
+
+- The horizontal graph is easier to interpret, but only allows a comparison between movies on a single criteria.
+
+- The information above might also be still detailed for some users, who might be just looking for a trend. To them, getting an overview through the clouds of word would be the most efficient
+
+- There is no movie without story, and no story without locations. To take into account that aspect, we concluded that the map would provide insights related to any geographical features, whether it's the studio address, the partnership, or where the scene were recorded,
+
+
+
+**On improving the User experience**
+
+Having radio buttons everywhere for each visualization seemed to bring more complexity. In order to keep a sense of unity, we decided to use the affluvial graph as the '**main tool**' to select and filter movies: the other visualization should be updated accordingly, based on criteria and ranges of value with the cursors.
+
+To avoid the tedious task of  scrolling back and forth to change settings and see how it will affect the  desired results, this tool will slide along with the page to stay visible.
+
+
+
+<img src='img/MDE_proposition.jpg'></img>
+
+
+
+# Final design
+
+<img src='img/final-design.jpg' style='border: solid 1px;'>
+
