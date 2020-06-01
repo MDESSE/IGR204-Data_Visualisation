@@ -3,14 +3,19 @@ if __name__ == "__main__":
     from pathlib import Path
     import sys
     import pandas as pd
-    import tmdbsimple as tmdb
+    #import tmdbsimple as tmdb
 
     project_path = Path().cwd().parent.parent
     data_path = project_path / "data"
     src_path = project_path / "python" / "src"
     sys.path.append(str(src_path))
 
-    from cleaning import create_actors_dataframe
+    #from cleaning import create_actors_dataframe
+    from cleaning import clean_movies_dataframe
+
+    movies = pd.read_csv(data_path / "tmdb-movie-metadata" / "tmdb_5000_movies.csv")
+    _ = clean_movies_dataframe(movies, data_path / "movies_details.csv")
+
 
     parser = argparse.ArgumentParser()
     parser.add_argument('params', nargs='*', help='list of parameters')
