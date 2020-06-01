@@ -47,7 +47,7 @@ def create_actors_dataframe(credits_df, save_path=None, actor_id=None):
     return list_of_id
 
 
-def clean_movies_dataframe(movies: dataframe) -> dataframe :
+def clean_movies_dataframe(movies: dataframe, save_path=None) -> dataframe :
 
     """
     Create dataset containing all informations related to a movie (budget, income, popularity...)
