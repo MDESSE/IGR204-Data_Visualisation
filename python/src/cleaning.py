@@ -47,7 +47,7 @@ def create_actors_dataframe(credits_df, save_path=None, actor_id=None):
     return list_of_id
 
 
-def clean_movies_dataframe(movies: dataframe, save_path=None) -> dataframe :
+def clean_movies_dataframe(movies, save_path=None):
 
     """
     Create dataset containing all informations related to a movie (budget, income, popularity...)
@@ -58,6 +58,11 @@ def clean_movies_dataframe(movies: dataframe, save_path=None) -> dataframe :
     df = movies.copy()
     for col in ['keywords', 'genres', 'spoken_languages']:
         df[col] = df[col].map(lambda values: '-'.join([value['name'] for value in json.loads(values)]))
-    df = df.drop(['production_companies', 'production_countries'], axis=1)
+    df['release_date'] = pd.to_datetime(df['release_date'], format='%Y%m%d', errors='ignore')
+    df = df.drop(['production_companies', 'production_countries', 'homepage', 'overview', 'tagline'], axis=1)
+
+    if save_path is not None:
+        df.to_csv(save_path)
+
     return df
 
