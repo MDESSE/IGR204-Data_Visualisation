@@ -5,6 +5,7 @@ import json
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 
+
 def create_actors_dataframe(credits_df, save_path=None, actor_id=None):
     """Create the dataframe of actors present in the tmdb dataset.
     Parameters
@@ -27,9 +28,9 @@ def create_actors_dataframe(credits_df, save_path=None, actor_id=None):
         recover_index = list_of_id.index(actor_id)
         list_of_id = list_of_id[recover_index:]
     else:
-        list_of_id = set([actor['id'] for actor in actors])
+            list_of_id = set([actor['id'] for actor in actors])
     actors.clear()
-    
+
     for state, id in enumerate(list_of_id):
         try:
             actor = tmdb.People(id).info()
@@ -37,7 +38,7 @@ def create_actors_dataframe(credits_df, save_path=None, actor_id=None):
             print(f'id {id} not found')
         else:
             actors.append(actor)
-        if save_path is not None and state%500==0:
+        if save_path is not None and state % 500 == 0:
             actors_df = pd.DataFrame(actors).set_index('id').drop(columns_to_drop, axis=1)
             actors_df.to_csv(save_path)
 
@@ -47,22 +48,34 @@ def create_actors_dataframe(credits_df, save_path=None, actor_id=None):
     return list_of_id
 
 
-def clean_movies_dataframe(movies, save_path=None):
-
+def clean_movies_dataframe(movies_df, save_path=None):
     """
     Create dataset containing all informations related to a movie (budget, income, popularity...)
     :param movies: tmdb dataset
     :return: dataset with movie informations
     """
 
-    df = movies.copy()
+    df = movies_df.copy()
     for col in ['keywords', 'genres', 'spoken_languages']:
         df[col] = df[col].map(lambda values: '-'.join([value['name'] for value in json.loads(values)]))
     df['release_date'] = pd.to_datetime(df['release_date'], format='%Y%m%d', errors='ignore')
     df = df.drop(['production_companies', 'production_countries', 'homepage', 'overview', 'tagline'], axis=1)
-
+    df.reset_index(drop=True)
     if save_path is not None:
         df.to_csv(save_path)
 
     return df
+
+
+def create_genders_table(movies_df, save_path=None):
+    genders_list = flatten([json.loads(item) for index, item in movies_df.genres.iteritems()])
+    genders_set = set([(g['id'], g['name']) for g in genders_list])
+
+    genders_table = pd.DataFrame(genders_set, columns=['id', 'name'])
+    genders_table.reset_index(drop=True)
+
+    if save_path is not None:
+        genders_table.to_csv(save_path)
+
+    return genders_table
 
