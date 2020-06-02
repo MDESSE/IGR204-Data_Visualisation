@@ -1,3 +1,4 @@
+from pandas import DataFrame
 from requests.models import HTTPError
 import pandas as pd
 import tmdbsimple as tmdb
@@ -28,7 +29,7 @@ def create_actors_dataframe(credits_df, save_path=None, actor_id=None):
         recover_index = list_of_id.index(actor_id)
         list_of_id = list_of_id[recover_index:]
     else:
-            list_of_id = set([actor['id'] for actor in actors])
+        list_of_id = set([actor['id'] for actor in actors])
     actors.clear()
 
     for state, id in enumerate(list_of_id):
@@ -48,11 +49,21 @@ def create_actors_dataframe(credits_df, save_path=None, actor_id=None):
     return list_of_id
 
 
-def clean_movies_dataframe(movies_df, save_path=None):
+def clean_movies_dataframe(movies_df: pd.DataFrame, save_path=None)-> pd.DataFrame:
     """
     Create dataset containing all informations related to a movie (budget, income, popularity...)
-    :param movies: tmdb dataset
-    :return: dataset with movie informations
+
+    Parameters
+    ----------
+    movies_df : pandas.DataFrame
+        dataframe from the file tmdb_5000_movies.csv
+    save_path : str or None
+        Save the dataframe to the given path if not None
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame which contains information about movies in the tmdb dataset
     """
 
     df = movies_df.copy()
@@ -67,7 +78,21 @@ def clean_movies_dataframe(movies_df, save_path=None):
     return df
 
 
-def create_genders_table(movies_df, save_path=None):
+def create_genders_table(movies_df: pd.DataFrame, save_path: object = None)-> pd.DataFrame:
+    """
+    Create table (DataFrame) which links gender to our id.
+    Parameters
+    ----------
+    movies_df : pandas.DataFrame
+    save_path : str or None
+        Save the dataframe to the given path if not None
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame indexing gender to our id
+
+    """
     genders_list = flatten([json.loads(item) for index, item in movies_df.genres.iteritems()])
     genders_set = set([(g['id'], g['name']) for g in genders_list])
 
@@ -79,3 +104,32 @@ def create_genders_table(movies_df, save_path=None):
 
     return genders_table
 
+
+def create_genders_movies(movies_df:pd.DataFrame, save_path: object = None) -> pd.DataFrame:
+    """
+    Create table (DataFrame) which links gender id to movie id
+
+    Parameters
+    ----------
+    movies_df : pandas.DataFrame
+        dataframe from the file tmdb_5000_movies.csv
+    save_path : str or None
+        Save the dataframe to the given path if not None
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame which contains gender_id and movie_id
+    """
+
+    movies_genders = pd.DataFrame({'movie_id': [], 'gender_id': []})
+    for index, row in movies_df.iterrows():
+        genres = json.loads(row['genres'])
+        for genre in genres:
+            movies_genders = movies_genders.append({'movie_id': int(row.id), 'gender_id': int(genre['id'])},
+                                                   ignore_index=True)
+
+    if save_path is not None:
+        movies_genders.to_csv(save_path)
+
+    return movies_genders

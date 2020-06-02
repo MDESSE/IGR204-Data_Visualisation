@@ -34,3 +34,7 @@ if __name__ == "__main__":
     if 'gender' in args.dataset:
         gender = pd.read_csv(data_path / "tmdb-movie-metadata" / "tmdb_5000_movies.csv")
         _ = create_genders_table(gender, data_path / "gender.csv")
+
+    if 'movie_gender':
+        movies_gender = pd.read_csv(data_path / "tmdb-movie-metadata" / "tmdb_5000_movies.csv")
+        _ = create_genders_movies(movies_gender, data_path / "movies_gender.csv")
