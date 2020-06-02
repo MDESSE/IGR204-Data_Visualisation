@@ -73,12 +73,12 @@ def clean_movies_dataframe(movies_df: pd.DataFrame, save_path=None)-> pd.DataFra
     df = df.drop(['production_companies', 'production_countries', 'homepage', 'overview', 'tagline'], axis=1)
     df.reset_index(drop=True)
     if save_path is not None:
-        df.to_csv(save_path)
+        df.to_csv(save_path, index=False)
 
     return df
 
 
-def create_genders_table(movies_df: pd.DataFrame, save_path: object = None)-> pd.DataFrame:
+def create_genders_table(movies_df: pd.DataFrame, save_path: object = None) -> pd.DataFrame:
     """
     Create table (DataFrame) which links gender to our id.
     Parameters
@@ -127,8 +127,10 @@ def create_genders_movies(movies_df:pd.DataFrame, save_path: object = None) -> p
         for genre in genres:
             movies_genders = movies_genders.append({'movie_id': int(row.id), 'gender_id': int(genre['id'])},
                                                    ignore_index=True)
-
+            movies_genders.movie_id = movies_genders.movie_id.astype('int64')
+            movies_genders.gender_id = movies_genders.gender_id.astype('int64')
     if save_path is not None:
         movies_genders.to_csv(save_path, index=False)
+
 
     return movies_genders
