@@ -97,10 +97,9 @@ def create_genders_table(movies_df: pd.DataFrame, save_path: object = None)-> pd
     genders_set = set([(g['id'], g['name']) for g in genders_list])
 
     genders_table = pd.DataFrame(genders_set, columns=['id', 'name'])
-    genders_table.reset_index(drop=True)
 
     if save_path is not None:
-        genders_table.to_csv(save_path)
+        genders_table.to_csv(save_path, index=False)
 
     return genders_table
 
@@ -130,6 +129,6 @@ def create_genders_movies(movies_df:pd.DataFrame, save_path: object = None) -> p
                                                    ignore_index=True)
 
     if save_path is not None:
-        movies_genders.to_csv(save_path)
+        movies_genders.to_csv(save_path, index=False)
 
     return movies_genders
