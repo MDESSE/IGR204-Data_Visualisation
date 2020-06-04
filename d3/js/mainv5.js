@@ -2,49 +2,51 @@
 // Copyright (c) 2012, Kai Chang
 // Released under the BSD License: http://opensource.org/licenses/BSD-3-Clause
 
+
 var width = document.body.clientWidth,
     height = d3.max([document.body.clientHeight-540, 240]);
 
 var m = [60, 0, 10, 0],
     w = width - m[1] - m[3],
     h = height - m[0] - m[2],
-    xscale = d3.scale.ordinal().rangePoints([0, w], 1),
+    xscale = d3.scaleBand().rangeRound([0, w], 1),
     yscale = {},
     dragging = {},
-    line = d3.svg.line(),
-    axis = d3.svg.axis().orient("left").ticks(1+height/50),
+    line = d3.line(),
+    axis = d3.axisLeft().ticks(1+height/50),
     data,
     foreground,
     background,
     highlighted,
-    dimensions,                           
+    dimensions,
+    extents,                           
     legend,
     render_speed = 50,
     brush_count = 0,
     excluded_groups = [];
 
 var colors = {
-  "Action": [185,56,73],
-  "Adventure": [37,50,75],
-  "Fantasy": [325,50,39],
-  "Science Fiction": [10,28,67],
-  "Crime": [271,39,57],
-  "Drama": [56,58,73],
-  "Thriller": [28,100,52],
-  "Animation": [41,75,61],
-  "Family": [60,86,61],
-  "Western": [30,100,73],
-  "Comedy": [318,65,67],
-  "Romance": [274,30,76],
-  "Horror": [20,49,49],
-  "Mystery": [334,80,84],
-  "History": [185,80,45],
-  "War": [10,30,42],
-  "Music": [339,60,49],
-  "Documentary": [359,69,49],
-  "Foreign": [204,70,41],
-  "TV Movie": [1,100,79],
-  "unknown": [1,100,79]
+    "Action": [185,56,73],
+    "Adventure": [37,50,75],
+    "Fantasy": [325,50,39],
+    "Science Fiction": [10,28,67],
+    "Crime": [271,39,57],
+    "Drama": [56,58,73],
+    "Thriller": [28,100,52],
+    "Animation": [41,75,61],
+    "Family": [60,86,61],
+    "Western": [30,100,73],
+    "Comedy": [318,65,67],
+    "Romance": [274,30,76],
+    "Horror": [20,49,49],
+    "Mystery": [334,80,84],
+    "History": [185,80,45],
+    "War": [10,30,42],
+    "Music": [339,60,49],
+    "Documentary": [359,69,49],
+    "Foreign": [204,70,41],
+    "TV Movie": [1,100,79],
+    "unknown": [1,100,79]
 };
 
 // Scale chart and canvas height
@@ -76,13 +78,13 @@ background.lineWidth = 1.7;
 
 // SVG for ticks, labels, and interactions
 var svg = d3.select("svg")
-    .attr("width", w + m[1] + m[3])
+    .attr("width", w + 200)
     .attr("height", h + m[0] + m[2])
-  .append("svg:g")
+    .append("svg:g")
     .attr("transform", "translate(" + m[3] + "," + m[0] + ")");
 
 // Load the data and visualization
-d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv", function(raw_data) {
+d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data) {
   // Convert quantitative scales to floats
 
   data = raw_data.map(function(d) {
@@ -113,19 +115,19 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv", function(raw_data) {
 
   // Extract the list of numerical dimensions and create a scale for each.
   xscale.domain(dimensions = d3.keys(data[0]).filter(function(k) {
-    return (_.isNumber(data[0][k])) && (yscale[k] = d3.scale.linear()
+    return (_.isNumber(data[0][k])) && (yscale[k] = d3.scaleLinear()
       .domain(d3.extent(data, function(d) { return +d[k]; }))
       .range([h, 0]));
-  }).sort());
+    }).sort());
 
   // Add a group element for each dimension.
   var g = svg.selectAll(".dimension")
       .data(dimensions)
-    .enter().append("svg:g")
+      .enter().append("svg:g")
       .attr("class", "dimension")
       .attr("transform", function(d) { return "translate(" + xscale(d) + ")"; })
-      .call(d3.behavior.drag()
-        .on("dragstart", function(d) {
+      .call(d3.drag()
+        .on("start", function(d) {
           dragging[d] = this.__origin__ = xscale(d);
           this.__dragged__ = false;
           d3.select("#foreground").style("opacity", "0.35");
@@ -145,7 +147,7 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv", function(raw_data) {
             d3.select(this).select(".background").style("fill", null);
           }
         })
-        .on("dragend", function(d) {
+        .on("end", function(d) {
           if (!this.__dragged__) {
             // no movement, invert axis
             var extent = invert_axis(d);
@@ -177,7 +179,7 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv", function(raw_data) {
   // Add an axis and title.
   g.append("svg:g")
       .attr("class", "axis")
-      .attr("transform", "translate(0,0)")
+      .attr("transform", "translate(0, 0)")
       .each(function(d) { d3.select(this).call(axis.scale(yscale[d])); })
     .append("svg:text")
       .attr("text-anchor", "middle")
@@ -191,11 +193,13 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv", function(raw_data) {
   // Add and store a brush for each axis.
   g.append("svg:g")
       .attr("class", "brush")
-      .each(function(d) { d3.select(this).call(yscale[d].brush = d3.svg.brush().y(yscale[d]).on("brush", brush)); })
-    .selectAll("rect")
+      .each(function(d) { d3.select(this).call(yscale[d].brush = d3.brushY().
+                                      extent([[-15, 0], [15, Math.max(...yscale[d].range())]]).
+                                      on("brush", brush).on("end", brushend)); })
+      .selectAll("rect")
       .style("visibility", null)
-      .attr("x", -23)
-      .attr("width", 36)
+      .attr("x", -15)
+      .attr("width", 20)
       .append("title")
         .text("Drag up or down to brush along this axis");
 
@@ -207,6 +211,7 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv", function(raw_data) {
   legend = create_legend(colors,brush);
 
   // Render full foreground
+  extents = dimensions.map(function(p) { return [0,0]; });
   brush();
 
 });
@@ -219,17 +224,17 @@ function gray_copy(source, target) {
 
 // http://www.html5rocks.com/en/tutorials/canvas/imagefilters/
 function grayscale(pixels, args) {
-  var d = pixels.data;
-  for (var i=0; i<d.length; i+=4) {
-    var r = d[i];
-    var g = d[i+1];
-    var b = d[i+2];
-    // CIE luminance for the RGB
-    // The human eye is bad at seeing red and blue, so we de-emphasize them.
-    var v = 0.2126*r + 0.7152*g + 0.0722*b;
-    d[i] = d[i+1] = d[i+2] = v
-  }
-  return pixels;
+    var d = pixels.data;
+    for (var i=0; i<d.length; i+=4) {
+        var r = d[i];
+        var g = d[i+1];
+        var b = d[i+2];
+        // CIE luminance for the RGB
+        // The human eye is bad at seeing red and blue, so we de-emphasize them.
+        var v = 0.2126*r + 0.7152*g + 0.0722*b;
+        d[i] = d[i+1] = d[i+2] = v
+        }
+    return pixels;
 };
 
 function create_legend(colors,brush) {
@@ -346,8 +351,8 @@ function unhighlight() {
 
 function invert_axis(d) {
   // save extent before inverting
-  if (!yscale[d].brush.empty()) {
-    var extent = yscale[d].brush.extent();
+  if (d3.event.target==yscale[d].brush) {
+    var extent = d3.event.selection.map(yscale[d].invert,yscale[d]);
   }
   if (yscale[d].inverted == true) {
     yscale[d].range([h, 0]);
@@ -365,23 +370,6 @@ function invert_axis(d) {
   return extent;
 }
 
-// Draw a single polyline
-/*
-function path(d, ctx, color) {
-  if (color) ctx.strokeStyle = color;
-  var x = xscale(0)-15;
-      y = yscale[dimensions[0]](d[dimensions[0]]);   // left edge
-  ctx.beginPath();
-  ctx.moveTo(x,y);
-  dimensions.map(function(p,i) {
-    x = xscale(p),
-    y = yscale[p](d[p]);
-    ctx.lineTo(x, y);
-  });
-  ctx.lineTo(x+15, y);                               // right edge
-  ctx.stroke();
-}
-*/
 
 function path(d, ctx, color) {
   if (color) ctx.strokeStyle = color;
@@ -417,42 +405,49 @@ function position(d) {
 // Handles a brush event, toggling the display of foreground lines.
 // TODO refactor
 function brush() {
-  brush_count++;
-  var actives = dimensions.filter(function(p) { return !d3.event.selection === null; }),
-      extents = actives.map(function(p) { return yscale[p].brush.extent(); });
-
-  // hack to hide ticks beyond extent
-  var b = d3.selectAll('.dimension')[0]
-    .forEach(function(element, i) {
-      var dimension = d3.select(element).data()[0];
-      if (_.include(actives, dimension)) {
-        var extent = extents[actives.indexOf(dimension)];
-        d3.select(element)
-          .selectAll('text')
-          .style('font-weight', 'bold')
-          .style('font-size', '13px')
-          .style('display', function() { 
-            var value = d3.select(this).data();
-            return extent[0] <= value && value <= extent[1] ? null : "none"
-          });
-      } else {
-        d3.select(element)
-          .selectAll('text')
-          .style('font-size', null)
-          .style('font-weight', null)
-          .style('display', null);
-      }
-      d3.select(element)
-        .selectAll('.label')
-        .style('display', null);
-    });
+    brush_count++;
+    if (d3.event != null ){
+        if (d3.event.selection != null){
+            for(var i=0;i<dimensions.length;++i){
+                if(d3.event.target==yscale[dimensions[i]].brush) {
+                    extents[i]=d3.event.selection.map(yscale[dimensions[i]].invert,yscale[dimensions[i]]);
+                }
+            } 
+        }
+    }
+    
+    // hack to hide ticks beyond extent
+    var b = d3.selectAll('.dimension')
+        .each(function(element, i) {
+        var dimension = d3.select(element).data()[0];
+        if (_.include(dimensions, dimension)) {
+            var extent = extents[dimensions.indexOf(dimension)];
+            d3.select(element)
+              .selectAll('text')
+              .style('font-weight', 'bold')
+              .style('font-size', '13px')
+              .style('display', function() { 
+                var value = d3.select(this).data();
+                return extent[0] <= value && value <= extent[1] ? null : "none"
+              });
+        } else {
+            d3.select(element)
+                .selectAll('text')
+                .style('font-size', null)
+                .style('font-weight', null)
+                .style('display', null);
+        }
+          d3.select(element)
+            .selectAll('.label')
+            .style('display', null);
+        });
     ;
  
   // bold dimensions with label
   d3.selectAll('.label')
     .style("font-weight", function(dimension) {
-      if (_.include(actives, dimension)) return "bold";
-      return null;
+        if (extents[dimensions.indexOf(dimension)][0] !== 0) return "bold";
+        return null;
     });
 
   // Get lines within extents
@@ -462,13 +457,17 @@ function brush() {
       return !_.contains(excluded_groups, d.group);
     })
     .map(function(d) {
-      return actives.every(function(p, dimension) {
-        return extents[dimension][0] <= d[p] && d[p] <= extents[dimension][1];
+      return dimensions.every(function(p, dimension) {
+        if(extents[dimension][0] == 0 && extents[dimension][1] == 0){
+            return true
+        }else{
+            return extents[dimension][1] <= d[p] && d[p] <= extents[dimension][0]; 
+        }
       }) ? selected.push(d) : null;
     });
 
   // free text search
-  var query = d3.select("#search")[0][0].value;
+  var query = d3.select("#search").node().value;
   if (query.length > 0) {
     selected = search(selected, query);
   }
@@ -508,6 +507,18 @@ function brush() {
   paths(selected, foreground, brush_count, true);
 }
 
+// if selection is null set extents to [0, 0]
+function brushend(){
+    if(d3.event.selection == null){
+        for(var i=0;i<dimensions.length;++i){
+            if(d3.event.target==yscale[dimensions[i]].brush) {
+                extents[i]=[0, 0];
+            }
+        }
+        brush()
+    }  
+}
+
 // render a set of polylines on a canvas
 function paths(selected, ctx, count) {
   var n = selected.length,
@@ -545,14 +556,16 @@ function update_ticks(d, extent) {
     // single tick
     if (extent) {
       // restore previous extent
-      brush_el.call(yscale[d].brush = d3.svg.brush().y(yscale[d]).extent(extent).on("brush", brush));
+      brush_el.call(yscale[d].brush = d3.brushY().extent(extent).on("brush", brush));
     } else {
-      brush_el.call(yscale[d].brush = d3.svg.brush().y(yscale[d]).on("brush", brush));
+      brush_el.call(yscale[d].brush = d3.brushY().
+                                      extent([[-15, 0], [15, Math.max(...yscale[d].range())]]).on("brush", brush));
     }
   } else {
     // all ticks
     d3.selectAll(".brush")
-      .each(function(d) { d3.select(this).call(yscale[d].brush = d3.svg.brush().y(yscale[d]).on("brush", brush)); })
+      .each(function(d) { d3.select(this).call(yscale[d].brush = d3.brushY().
+                                      extent([[-15, 0], [15, Math.max(...yscale[d].range())]]).on("brush", brush)); })
   }
 
   brush_count++;
@@ -606,8 +619,16 @@ function rescale() {
 
 // Get polylines within extents
 function actives() {
-  var actives = dimensions.filter(function(p) { return !yscale[p].brush.empty(); }),
-      extents = actives.map(function(p) { return yscale[p].brush.extent(); });
+  var actives = [];
+    if (brush_count != 1){
+        for(var i=0;i<dimensions.length;++i){
+            console.log(extents, actives)
+            if(d3.event.target==yscale[dimensions[i]].brush) {
+                actives.push(dimensions[i])
+                extents[i]=d3.event.selection.map(yscale[dimensions[i]].invert,yscale[dimensions[i]]);
+            }
+        }
+    }
 
   // filter extents and excluded groups
   var selected = [];
@@ -626,7 +647,6 @@ function actives() {
   if (query > 0) {
     selected = search(selected, query);
   }
-
   return selected;
 }
 
@@ -663,7 +683,7 @@ window.onresize = function() {
     .select("g")
       .attr("transform", "translate(" + m[3] + "," + m[0] + ")");
   
-  xscale = d3.scale.ordinal().rangePoints([0, w], 1).domain(dimensions);
+  xscale = d3.scaleBand().rangeRound([0, w], 1).domain(dimensions);
   dimensions.forEach(function(d) {
     yscale[d].range([h, 0]);
   });
@@ -672,7 +692,8 @@ window.onresize = function() {
     .attr("transform", function(d) { return "translate(" + xscale(d) + ")"; })
   // update brush placement
   d3.selectAll(".brush")
-    .each(function(d) { d3.select(this).call(yscale[d].brush = d3.svg.brush().y(yscale[d]).on("brush", brush)); })
+    .each(function(d) { d3.select(this).call(yscale[d].brush = d3.brushY().
+                                      extent([[-15, 0], [15, Math.max(...yscale[d].range())]]).on("brush", brush)); })
   brush_count++;
 
   // update axis placement
