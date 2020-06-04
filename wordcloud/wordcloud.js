@@ -1,20 +1,32 @@
+var words = [];
+var layout;
+var wordsMap = {};
+
 var d3 = require("d3"),
     cloud = require("d3-cloud");
 
-var layout = cloud()
-    .size([500, 500])
-    .words([
-      "Hello", "world", "normally", "you", "want", "more", "words",
-      "than", "this"].map(function(d) {
-      return {text: d, size: 10 + Math.random() * 90, test: "haha"};
-    }))
+d3.csv("data/words.csv").then(function(raw_data){
+  raw_data.map(function(d){
+      if (wordsMap.hasOwnProperty(d.words)) {
+        wordsMap[d.words]++;
+      } else {
+        wordsMap[d.words] = 1;
+      }
+  })
+  for (const [key, value] of Object.entries(wordsMap)) {
+    words.push({text: key, size: 10 + wordsMap[key] * 5})
+  }
+  layout = cloud()
+    .size([1200, 600])
+    .words(words)
     .padding(5)
-    .rotate(function() { return ~~(Math.random() * 2) * 90; })
+    .rotate(function() { return ~~(Math.random() * 2) * 45; })
     .font("Impact")
     .fontSize(function(d) { return d.size; })
     .on("end", draw);
 
-layout.start();
+  layout.start();
+})
 
 function draw(words) {
   d3.select("body").append("svg")
