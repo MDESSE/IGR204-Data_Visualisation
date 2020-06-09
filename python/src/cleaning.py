@@ -46,3 +46,11 @@ def create_actors_dataframe(credits_df, save_path=None, actor_id=None):
         actors_df.to_csv(save_path)
     return list_of_id
 
+
+def clean_movies_dataframe(movies):
+    df = movies.copy()
+    for col in ['keywords', 'genres', 'spoken_languages']:
+        df[col] = df[col].map(lambda values: '-'.join([value['name'] for value in json.loads(values)]))
+    df = df.drop(['production_companies', 'production_countries'], axis=1)
+    return df
+
