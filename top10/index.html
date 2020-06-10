@@ -1,0 +1,33 @@
+<html>
+<head>
+    <meta charset='utf-8'>
+    <title>top 10 </title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+  
+</head>
+<body>
+    
+
+    <div class="graph">
+        <div class="top10">
+            <input type="range" id="mySlider" min="1928" max="2020" value="1928" list="steplist">
+            <div id="time-slider-label"></div>
+            <datalist id="steplist"></datalist>
+            <div id="top10"></div>
+        </div>
+        <div>
+            <h2 id="yearTitle">1928</h2>
+        </div>
+    </div>
+    <div id="hiro_dataviz"></div>
+
+    <p>Criteria: </p>
+        <select id="label-option">
+          <option value="revenue" selected = "selected">Revenue</option>
+          <option value="budget">budget</option>
+          <option value="vote_average">vote_average</option>
+          <option value="popularity">popularity</option>
+        </select>
+        <script type="text/javascript" src="js/top10_movies.js"></script>
+</body>
+</html>
