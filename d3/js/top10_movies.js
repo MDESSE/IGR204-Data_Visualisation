@@ -9,8 +9,9 @@ var x,
     yaxislabel, 
     svg,
     i,
-    that
-
+    topData, 
+    mouseover, 
+    mouseout
 
 
 function top10(data){
@@ -62,7 +63,7 @@ function top10(data){
   i = "revenue"
 
   // create mouseover and mouseout functions
-  var mouseover = function(d){
+  mouseover = function(d){
     tooltip.transition()    
     .duration(200)    
     .style("opacity", 1);
@@ -73,7 +74,7 @@ function top10(data){
 
     }
 
-  var mouseout = function(d){
+  mouseout = function(d){
     tooltip.transition()    
     .duration(200)    
     .style("opacity", 0)
@@ -100,7 +101,9 @@ function top10(data){
   initialGraph(data);
 
     //update graph based on selection from HTML dragdown
-  d3.select("#label-option").on("change", change);
+  d3.select("#label-option").on("change", () => change(data));
+
+  topData = data.slice(0, 20)
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -109,12 +112,10 @@ function top10(data){
 
     var selectValue = d3.select('select').property('value')
 
-    var i = "revenue"
-
     // select topData based on i
     var topData = data.sort(function(a, b) {
       return d3.descending(+a[i], +b[i]);
-      }).slice(0, 20);
+      }).slice(0, 21);
 
     // rescale the domain
     x.domain([0, d3.max(topData, function(d) { return d[i] ;} )]);
@@ -149,7 +150,7 @@ function top10(data){
     .attr("y", function(d) { return y(d.name); })
     .attr("width",function(d){return x(0);} )
     .attr("height", 15)
-    .on("mouseover", mouseover )
+    .on("mouseover", mouseover)
     .on("mouseout", mouseout);
 
 
@@ -170,27 +171,25 @@ function top10(data){
 function change(data) {
 
   var selectValue = d3.select('select').property('value');
-
-
-  if (this.selectedIndex == 0){ 
-    i = "revenue";   
-  } else if (this.selectedIndex == 1){
-    i = "budget";
-  } else if (this.selectedIndex == 2){
-    i = "vote_average";
-  } else if (this.selectedIndex == 3){
-    i = "popularity";
-    }
-
-  
+  i = selectValue
   //update topData
-  var topData = data.sort(function(a, b) {
-    return d3.descending(+a[i], +b[i]);
+
+  var remake
+
+  if (topData.length < 20){
+    remake = true
+  }else{
+    remake = false
+  }
+
+  topData = data.sort(function(a, b) {
+    return d3.descending(+a[selectValue], +b[selectValue]);
   }).slice(0, 20);
+
 
   // update x and y domain / scale       
   x
-  .domain([0, d3.max(topData, function(d) { return d[i] ;} )])
+  .domain([0, d3.max(topData, function(d) { return d[selectValue] ;} )])
   .call(d3.axisBottom(x));
     
   y
@@ -201,7 +200,7 @@ function change(data) {
   // Update x axis label   (y axis remains unchanged)
   xaxislabel
   .attr("text-anchor", "end")
-  .text(i);
+  .text(selectValue);
   
   
   // Update the Y-axis and X-axis
@@ -218,24 +217,50 @@ function change(data) {
   .attr("transform", "translate(-10,0)rotate(-20)")
   .style("text-anchor", "end");
 
+  
+  console.log(d3.event, d3.event.target == d3.select('#label-option')._groups[0][0], d3.select('#label-option')._groups[0][0])
 
+  var event_is_select = d3.event.target == d3.select('#label-option')._groups[0][0]
 
-  const bar = svg.selectAll('.bar')
-    .data(topData);
+  if (remake & event_is_select == false){
+    var bar = svg.selectAll('.bar')
+    bar.remove()
 
-  bar.exit().remove(); 
+    svg.selectAll(".bar")
+        .data(topData)
+        .enter()
+        .append("rect")
+        .attr("class", "bar")
+        .attr("x",  function(d) {return  x(0);})
+        .attr("y", function(d) { return y(d.name); })
+        .attr("width",function(d){return x(0);} )
+        .attr("height", 15)
+        .on("mouseover", mouseover)
+        .on("mouseout", mouseout);
 
-  // Update data:
-  bar
-  .transition()
-  .duration(500)
-  .attr("x",  function(d) {return  x(0);})
-  .attr("y", function(d) { return y(d.name); })
-  .attr("width",function(d){return x(0);} )
-  .attr("width",function(d) { return  x(d[i]);}  )
-  .attr("height", 15);
-
+    svg.selectAll(".bar")
+      .transition()
+      .duration(500)
+      .attr("width",function(d) { return  x(d[i]);}  )
+      .attr("y", function(d) { return y(d.name); })
+      .attr("height", 15);
+  }else{
+    var bar = svg.selectAll('.bar').data(topData);
+    bar.exit().remove(); 
+    // Update data:
+    bar
+    .transition()
+    .duration(500)
+    .attr("x",  function(d) {return  x(0);})
+    .attr("y", function(d) { return y(d.name); })
+    .attr("width",function(d){return x(0);} )
+    .attr("width",function(d) { return  x(d[selectValue]);}  )
+    .attr("height", 15)
+    .on("mouseover", mouseover)
+    .on("mouseout", mouseout);;
   }
+}
+
 
 export default {top10, change};
   
