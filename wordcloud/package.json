@@ -1,0 +1,24 @@
+{
+  "name": "moviz",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MDESSE/IGR204-Data_Visualisation.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MDESSE/IGR204-Data_Visualisation/issues"
+  },
+  "homepage": "https://github.com/MDESSE/IGR204-Data_Visualisation#readme",
+  "dependencies": {
+    "browserify": "^16.5.1",
+    "d3": "^5.16.0",
+    "d3-cloud": "^1.2.5",
+  }
+}
