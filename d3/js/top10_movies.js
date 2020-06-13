@@ -255,9 +255,7 @@ function change(data) {
     .attr("y", function(d) { return y(d.name); })
     .attr("width",function(d){return x(0);} )
     .attr("width",function(d) { return  x(d[selectValue]);}  )
-    .attr("height", 15)
-    .on("mouseover", mouseover)
-    .on("mouseout", mouseout);;
+    .attr("height", 15);
   }
 }
 
