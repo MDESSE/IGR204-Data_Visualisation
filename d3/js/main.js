@@ -1,6 +1,6 @@
 var filterdata  = require("./filter.js");
 var top10  = require("./top10_movies.js");
-// var wordcloud = require("./wordcloud.js");
+var wordcloud = require("./wordcloud.js");
 var d3 = require("d3")
 var map = require("./map.js")
 
@@ -37,6 +37,6 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data
 
     filterdata.filterdata(data)
     top10.top10(data)
-    // wordcloud.wordcloud()
+    wordcloud.wordcloud()
     map.map(data)
   });

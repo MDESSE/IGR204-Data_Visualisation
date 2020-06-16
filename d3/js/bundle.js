@@ -764,11 +764,12 @@ function filterdata(data){
 //export default filterdata;
 module.exports.filterdata = filterdata;
   
-},{"./top10_movies.js":36,"d3":35}],2:[function(require,module,exports){
+},{"./top10_movies.js":4,"d3":42}],2:[function(require,module,exports){
 var filterdata  = require("./filter.js");
 var top10  = require("./top10_movies.js");
-var wordcloud = require("./wordcloud.js");
+// var wordcloud = require("./wordcloud.js");
 var d3 = require("d3")
+var map = require("./map.js")
 
 var data;
 
@@ -784,7 +785,8 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data
           popularity: parseFloat(d["popularity"]),
           genre: eval(d["genres"])[0]['name'],
           name: d["original_title"],
-          year: parseInt(d["release_date"].slice(0, 4))
+          year: parseInt(d["release_date"].slice(0, 4)),
+          country: eval(d["production_countries"])[0]["name"]//["iso_3166_1"]
         };
       }catch{
         return {
@@ -794,16 +796,486 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data
           popularity: parseFloat(d["popularity"]),
           genre: "unknown",
           name: d["original_title"],
-          year: parseInt(d["release_date"].slice(0, 4))
+          year: parseInt(d["release_date"].slice(0, 4)),
+          country: "unknown"
         };
       }
     });
 
     filterdata.filterdata(data)
     top10.top10(data)
-    wordcloud.wordcloud()
+    // wordcloud.wordcloud()
+    map.map(data)
   });
-},{"./filter.js":1,"./top10_movies.js":36,"./wordcloud.js":37,"d3":35}],3:[function(require,module,exports){
+},{"./filter.js":1,"./map.js":3,"./top10_movies.js":4,"d3":42}],3:[function(require,module,exports){
+
+var d3 = require("d3")
+var d3legend = require("d3-svg-legend")
+
+function map(data){
+    var [country_count, country_max] = count_country(data)
+
+    let color_scale = d3.scalePow()
+        .domain([0, country_max])
+        .range([d3.interpolateYlGnBu(0), d3.interpolateYlGnBu(1)])
+
+    var legend = d3legend.legendColor()
+        .scale(color_scale);
+    
+
+    console.log(color_scale)
+
+    var margin = { top: 50, left:50, right: 50, bottom: 50},
+        height = 400 - margin.top - margin.bottom,
+        width = 800 - margin.left - margin.right;
+
+    var svg = d3.select("#map")
+        .append("svg")
+        .attr("height", height + margin.top + margin.bottom)
+        .attr("width", width + margin.left + margin.right)
+        .append("g")
+        .attr("transform", "translate("+ margin.left + "," + margin.top + ")");
+    
+    //Read Data
+    d3.json("./data/map/countries.json").then((d) => {
+        ready( d , country_count)
+
+        var legendWidth = width * 0.6, legendHeight = 10;
+
+        //Color Legend container
+        var legendsvg = svg.append("g")
+            .attr("class", "legendWrapper")
+            .attr("transform", "translate(" + (width - 50) + "," + 70 + ")");
+
+        legendsvg.append("g")
+            .call(legend)
+            
+        //Append title
+        legendsvg.append("text")
+            .attr("class", "legendTitle")
+            .attr("x", 0)
+            .attr("y", -2)
+            .text("Legend");
+    })
+
+    //Create projection and center it (translate) and scaleit
+    var projection = d3.geoMercator()
+        .translate([ width / 2, height / 2 ])
+        .scale(100)
+
+    //Create the path using the projection
+    var path = d3.geoPath()
+        .projection(projection)
+
+    function ready (country_data, country_count) {
+
+        // Transform raw country_data
+        var countries = topojson.feature(country_data, country_data.objects.units).features
+
+        var countries_name = countries.map(function(d) {
+            return {
+                name: d["properties"]["name"]
+            };
+        })
+
+        for (const i in countries_name){
+            if (!(countries_name[i]['name'] in country_count)){
+                country_count[countries_name[i]['name']] = 0
+            }
+        }
+
+        //Create path for each country (path are needed for geometry)
+        svg.selectAll(".country")
+            .data(countries)
+            .enter().append("path")
+            .attr("class", "country")
+            .attr("d", path)
+            .attr("fill", (d) => color_scale(country_count[d["properties"]["name"]]))
+            .on("mouseover", mouseover )
+            .on("mouseout", mouseout);
+
+    }
+
+    var mouseover = function(d){
+        tooltip.transition()    
+        .duration(200)    
+        .style("opacity", 1);
+    
+        tooltip .html("Name: " + d["properties"]["name"] + "<br/>Number of movies: " + country_count[d["properties"]["name"]])
+        .style("left", (d3.event.pageX + 10) + "px")
+        .style("top", (d3.event.pageY - 15) + "px")
+    
+        }
+    
+    var mouseout = function(d){
+        tooltip.transition()    
+        .duration(200)    
+        .style("opacity", 0)
+    }
+
+    // create tooltips
+    var tooltip = d3.select("body")
+        .append("div")  
+        .attr("class", "tooltip")
+        .style('position','absolute')
+        .style("opacity", 0)
+        .style("background-color", "lightsteelblue")
+        .style("border", "solid")
+        .style("border-width", "1px")
+        .style("border-radius", "5px")
+        .style("padding", "10px");
+};
+
+function change(data){
+    var svg = d3.select("#map")
+        svg.selectAll(".country")
+
+    d3.json("./data/map/countries.json").then((country_data) => {
+            
+        var [country_count, country_max] = count_country(data)
+
+        // Transform raw country_data
+        var countries = topojson.feature(country_data, country_data.objects.units).features
+
+        var countries_name = countries.map(function(d) {
+            return {
+                name: d["properties"]["name"]
+            };
+        })
+
+        for (const i in countries_name){
+            if (!(countries_name[i]['name'] in country_count)){
+                country_count[countries_name[i]['name']] = 0
+            }
+        }
+        //Update Color
+        svg.selectAll(".country")
+            .attr("fill", (d) => color_scale(country_count[d["properties"]["name"]]))
+    })
+};
+
+function count_country(data){
+    let initialValue = {}
+
+    var country_count = data.map(d => d.country).reduce(function (accumulator, currentValue) {
+        if (!(currentValue in accumulator)){
+            accumulator[currentValue] = 1
+        }
+        else{
+            accumulator[currentValue] += 1
+        }
+        return accumulator
+    }, initialValue)
+
+    var country_max = Object.entries(country_count).map(d => d[1]).reduce(( acc, cur ) => Math.max( acc, cur), -Infinity)
+    return [country_count, country_max]
+}
+
+module.exports.map = map; 
+},{"d3":42,"d3-svg-legend":30}],4:[function(require,module,exports){
+// MS BGD 2019-2020 - HIROTO YAMAKAWA 
+var d3 = require("d3")
+
+var x, 
+    y, 
+    yAxis,
+    xAxis,
+    xaxislabel, 
+    yaxislabel, 
+    svg,
+    i,
+    topData, 
+    mouseover, 
+    mouseout
+
+var format = d3.format(',')
+
+function top10(data){
+
+  // set the and margins of the graph
+  var margin = {top: 10, right: 30, bottom: 40, left: 100},
+      width = 1000 - margin.left - margin.right,
+      height = 500 - margin.top - margin.bottom;
+
+  // append the svg object to the body of the page
+  svg = d3.select("#top10")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // create variables
+  x = d3.scaleLinear()
+  .range([ 0, width]);
+
+  y = d3.scaleBand()
+  .range([ 0, height ])
+  .padding(1);
+
+  // create labels
+  yaxislabel =svg.append("text")
+  .attr("text-anchor", "end")
+  .attr("transform", "rotate(0)")
+  .attr("y", 0)
+  .attr("x", -15);        
+
+  xaxislabel = svg.append("text")
+  .attr("text-anchor", "end")
+  .attr("x", width)
+  .attr("y", height + margin.top + 20);
+      
+  // create axis
+  xAxis = svg.append("g")
+  .call(d3.axisLeft(x))
+  .attr("transform", "translate(0," + height + ")");
+
+  yAxis = svg.append("g")
+  .call(d3.axisLeft(y));
+
+  // set i to "revenue" (default choice)
+  i = "revenue"
+
+  // create mouseover and mouseout functions
+  mouseover = function(d){
+    tooltip.transition()    
+    .duration(200)    
+    .style("opacity", 1);
+
+    tooltip .html("name: " + d.name + "<br/>" + i + " : " + format(d[i]) + "<br/>" + "genre : "+ d.genre)
+    .style("left", (d3.event.pageX + 10) + "px")
+    .style("top", (d3.event.pageY - 15) + "px")
+
+    }
+
+  mouseout = function(d){
+    tooltip.transition()    
+    .duration(200)    
+    .style("opacity", 0)
+  }
+
+  // create tooltips
+  var tooltip = d3.select("body")
+      .append("div")  
+      .attr("class", "tooltip")
+      .style('position','absolute')
+      .style("opacity", 0)
+      .style("background-color", "lightsteelblue")
+      .style("border", "solid")
+      .style("border-width", "1px")
+      .style("border-radius", "5px")
+      .style("padding", "10px");
+    
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+   //./data/tmdb-movie-metadata/tmdb_5000_movies.csv
+    //initiate graph
+  initialGraph(data);
+
+    //update graph based on selection from HTML dragdown
+  d3.select("#label-option").on("change", () => change(data));
+
+  topData = data.slice(0, 20)
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // create function initialGraph
+  function initialGraph(data){
+
+    var selectValue = d3.select('select').property('value')
+
+    // select topData based on i
+    var topData = data.sort(function(a, b) {
+      return d3.descending(+a[i], +b[i]);
+      }).slice(0, 21);
+
+    // rescale the domain
+    x.domain([0, d3.max(topData, function(d) { return d[i] ;} )]);
+    y.domain(topData.map(function(d) { return d.name; }));
+
+    
+    //initiate X axis
+    xAxis
+    .call(d3.axisBottom(x))
+    .selectAll("text")
+    .attr("transform", "translate(-10,0)rotate(-20)")
+    .style("text-anchor", "end");
+
+    //initiate Y axis
+    yAxis
+    .call(d3.axisLeft(y));
+
+
+    //initiate X axis label
+    xaxislabel.text(i);
+
+    //initiate Y axis label
+    yaxislabel.text("movies");
+
+    //initiate bars, all starting at 0 at the beginning
+    svg.selectAll(".bar")
+    .data(topData)
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    .attr("x",  function(d) {return  x(0);})
+    .attr("y", function(d) { return y(d.name); })
+    .attr("width",function(d){return x(0);} )
+    .attr("height", 15)
+    .on("mouseover", mouseover)
+    .on("mouseout", mouseout);
+
+
+    //update the bar with the transition
+    svg.selectAll(".bar")
+    .transition()
+    .duration(500)
+    .attr("width",function(d) { return  x(d[i]);}  )
+    .attr("y", function(d) { return y(d.name); })
+    .attr("height", 15)
+    .attr("fill", function(d) {
+      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});;
+
+    // add label next to bar
+    svg.append("g")
+      .attr("fill", "white")
+      .attr("text-anchor", "end")
+      .style("font", "12px sans-serif")
+    .selectAll("label-top10")
+    .data(topData)
+    .enter().append("text")
+    .attr("class", "label-top10")
+    .attr("x", d => x(d[i]) - 4)
+    .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
+    .text(d => format(d[i]));
+
+  };
+  ////////////////////////////////////////////////////////////////////////////////////////////////
+}
+
+//create update function 
+
+function change(data) {
+
+  var selectValue = d3.select('select').property('value');
+  i = selectValue
+  //update topData
+
+  var remake
+
+  if (topData.length < 20){
+    remake = true
+  }else{
+    remake = false
+  }
+
+  topData = data.sort(function(a, b) {
+    return d3.descending(+a[selectValue], +b[selectValue]);
+  }).slice(0, 20);
+
+
+  // update x and y domain / scale       
+  x
+  .domain([0, d3.max(topData, function(d) { return d[selectValue] ;} )])
+  .call(d3.axisBottom(x));
+    
+  y
+  .domain(topData.map(function(d) { return d.name; }))
+  .call(d3.axisLeft(y));
+    
+
+  // Update x axis label   (y axis remains unchanged)
+  xaxislabel
+  .attr("text-anchor", "end")
+  .text(selectValue);
+  
+  
+  // Update the Y-axis and X-axis
+  yAxis
+  .transition()
+  .duration(1500)
+  .call(d3.axisLeft(y));
+  
+  xAxis
+  .transition()
+  .duration(1500)
+  .call(d3.axisBottom(x))
+  .selectAll("text")
+  .attr("transform", "translate(-10,0)rotate(-20)")
+  .style("text-anchor", "end");
+
+  
+  console.log(d3.event, d3.event.target == d3.select('#label-option')._groups[0][0], d3.select('#label-option')._groups[0][0])
+
+  var event_is_select = d3.event.target == d3.select('#label-option')._groups[0][0]
+
+  if (remake & event_is_select == false){
+    var bar = svg.selectAll('.bar')
+    bar.remove()
+
+    svg.selectAll(".bar")
+        .data(topData)
+        .enter()
+        .append("rect")
+        .attr("class", "bar")
+        .attr("x",  function(d) {return  x(0);})
+        .attr("y", function(d) { return y(d.name); })
+        .attr("width",function(d){return x(0);} )
+        .attr("height", 15)
+        .on("mouseover", mouseover)
+        .on("mouseout", mouseout);
+
+    svg.selectAll(".bar")
+      .transition()
+      .duration(500)
+      .attr("width",function(d) { return  x(d[i]);}  )
+      .attr("y", function(d) { return y(d.name); })
+      .attr("height", 15)
+      .attr("fill", function(d) {
+      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});
+
+  }else{
+    var bar = svg.selectAll('.bar').data(topData);
+    bar.exit().remove(); 
+    // Update data:
+    bar
+    .transition()
+    .duration(500)
+    .attr("x",  function(d) {return  x(0);})
+    .attr("y", function(d) { return y(d.name); })
+    .attr("width",function(d){return x(0);} )
+    .attr("width",function(d) { return  x(d[selectValue]);}  )
+    .attr("height", 15)
+    .attr("fill", function(d) {
+      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});
+  }
+
+  // add label next to bar
+
+  var textlabel = svg.selectAll(".label-top10").data(topData)
+  textlabel.exit().remove()
+
+  textlabel.transition().duration(300)
+    .attr("x", d => x(d[i]) - 4)
+    .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
+    .text(d => format(d[i]));
+
+}
+
+module.exports.top10 = top10; 
+module.exports.change = change; 
+
+// export default {top10, change};
+  
+
+  
+       
+
+},{"d3":42}],5:[function(require,module,exports){
 // https://d3js.org/d3-array/ v1.2.4 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -1395,7 +1867,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],4:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 // https://d3js.org/d3-axis/ v1.0.12 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -1590,7 +2062,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],5:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 // https://d3js.org/d3-brush/ v1.1.5 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dispatch'), require('d3-drag'), require('d3-interpolate'), require('d3-selection'), require('d3-transition')) :
@@ -2209,7 +2681,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-dispatch":11,"d3-drag":12,"d3-interpolate":20,"d3-selection":27,"d3-transition":32}],6:[function(require,module,exports){
+},{"d3-dispatch":12,"d3-drag":13,"d3-interpolate":21,"d3-selection":28,"d3-transition":39}],8:[function(require,module,exports){
 // https://d3js.org/d3-chord/ v1.0.6 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-array'), require('d3-path')) :
@@ -2441,510 +2913,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{"d3-array":3,"d3-path":21}],7:[function(require,module,exports){
-(function (global){
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g=(g.d3||(g.d3 = {}));g=(g.layout||(g.layout = {}));g.cloud = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-// Word cloud layout by Jason Davies, https://www.jasondavies.com/wordcloud/
-// Algorithm due to Jonathan Feinberg, http://static.mrfeinberg.com/bv_ch03.pdf
-
-var dispatch = require("d3-dispatch").dispatch;
-
-var cloudRadians = Math.PI / 180,
-    cw = 1 << 11 >> 5,
-    ch = 1 << 11;
-
-module.exports = function() {
-  var size = [256, 256],
-      text = cloudText,
-      font = cloudFont,
-      fontSize = cloudFontSize,
-      fontStyle = cloudFontNormal,
-      fontWeight = cloudFontNormal,
-      rotate = cloudRotate,
-      padding = cloudPadding,
-      spiral = archimedeanSpiral,
-      words = [],
-      timeInterval = Infinity,
-      event = dispatch("word", "end"),
-      timer = null,
-      random = Math.random,
-      cloud = {},
-      canvas = cloudCanvas;
-
-  cloud.canvas = function(_) {
-    return arguments.length ? (canvas = functor(_), cloud) : canvas;
-  };
-
-  cloud.start = function() {
-    var contextAndRatio = getContext(canvas()),
-        board = zeroArray((size[0] >> 5) * size[1]),
-        bounds = null,
-        n = words.length,
-        i = -1,
-        tags = [],
-        data = words.map(function(d, i) {
-          d.text = text.call(this, d, i);
-          d.font = font.call(this, d, i);
-          d.style = fontStyle.call(this, d, i);
-          d.weight = fontWeight.call(this, d, i);
-          d.rotate = rotate.call(this, d, i);
-          d.size = ~~fontSize.call(this, d, i);
-          d.padding = padding.call(this, d, i);
-          return d;
-        }).sort(function(a, b) { return b.size - a.size; });
-
-    if (timer) clearInterval(timer);
-    timer = setInterval(step, 0);
-    step();
-
-    return cloud;
-
-    function step() {
-      var start = Date.now();
-      while (Date.now() - start < timeInterval && ++i < n && timer) {
-        var d = data[i];
-        d.x = (size[0] * (random() + .5)) >> 1;
-        d.y = (size[1] * (random() + .5)) >> 1;
-        cloudSprite(contextAndRatio, d, data, i);
-        if (d.hasText && place(board, d, bounds)) {
-          tags.push(d);
-          event.call("word", cloud, d);
-          if (bounds) cloudBounds(bounds, d);
-          else bounds = [{x: d.x + d.x0, y: d.y + d.y0}, {x: d.x + d.x1, y: d.y + d.y1}];
-          // Temporary hack
-          d.x -= size[0] >> 1;
-          d.y -= size[1] >> 1;
-        }
-      }
-      if (i >= n) {
-        cloud.stop();
-        event.call("end", cloud, tags, bounds);
-      }
-    }
-  }
-
-  cloud.stop = function() {
-    if (timer) {
-      clearInterval(timer);
-      timer = null;
-    }
-    return cloud;
-  };
-
-  function getContext(canvas) {
-    canvas.width = canvas.height = 1;
-    var ratio = Math.sqrt(canvas.getContext("2d").getImageData(0, 0, 1, 1).data.length >> 2);
-    canvas.width = (cw << 5) / ratio;
-    canvas.height = ch / ratio;
-
-    var context = canvas.getContext("2d");
-    context.fillStyle = context.strokeStyle = "red";
-    context.textAlign = "center";
-
-    return {context: context, ratio: ratio};
-  }
-
-  function place(board, tag, bounds) {
-    var perimeter = [{x: 0, y: 0}, {x: size[0], y: size[1]}],
-        startX = tag.x,
-        startY = tag.y,
-        maxDelta = Math.sqrt(size[0] * size[0] + size[1] * size[1]),
-        s = spiral(size),
-        dt = random() < .5 ? 1 : -1,
-        t = -dt,
-        dxdy,
-        dx,
-        dy;
-
-    while (dxdy = s(t += dt)) {
-      dx = ~~dxdy[0];
-      dy = ~~dxdy[1];
-
-      if (Math.min(Math.abs(dx), Math.abs(dy)) >= maxDelta) break;
-
-      tag.x = startX + dx;
-      tag.y = startY + dy;
-
-      if (tag.x + tag.x0 < 0 || tag.y + tag.y0 < 0 ||
-          tag.x + tag.x1 > size[0] || tag.y + tag.y1 > size[1]) continue;
-      // TODO only check for collisions within current bounds.
-      if (!bounds || !cloudCollide(tag, board, size[0])) {
-        if (!bounds || collideRects(tag, bounds)) {
-          var sprite = tag.sprite,
-              w = tag.width >> 5,
-              sw = size[0] >> 5,
-              lx = tag.x - (w << 4),
-              sx = lx & 0x7f,
-              msx = 32 - sx,
-              h = tag.y1 - tag.y0,
-              x = (tag.y + tag.y0) * sw + (lx >> 5),
-              last;
-          for (var j = 0; j < h; j++) {
-            last = 0;
-            for (var i = 0; i <= w; i++) {
-              board[x + i] |= (last << msx) | (i < w ? (last = sprite[j * w + i]) >>> sx : 0);
-            }
-            x += sw;
-          }
-          delete tag.sprite;
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  cloud.timeInterval = function(_) {
-    return arguments.length ? (timeInterval = _ == null ? Infinity : _, cloud) : timeInterval;
-  };
-
-  cloud.words = function(_) {
-    return arguments.length ? (words = _, cloud) : words;
-  };
-
-  cloud.size = function(_) {
-    return arguments.length ? (size = [+_[0], +_[1]], cloud) : size;
-  };
-
-  cloud.font = function(_) {
-    return arguments.length ? (font = functor(_), cloud) : font;
-  };
-
-  cloud.fontStyle = function(_) {
-    return arguments.length ? (fontStyle = functor(_), cloud) : fontStyle;
-  };
-
-  cloud.fontWeight = function(_) {
-    return arguments.length ? (fontWeight = functor(_), cloud) : fontWeight;
-  };
-
-  cloud.rotate = function(_) {
-    return arguments.length ? (rotate = functor(_), cloud) : rotate;
-  };
-
-  cloud.text = function(_) {
-    return arguments.length ? (text = functor(_), cloud) : text;
-  };
-
-  cloud.spiral = function(_) {
-    return arguments.length ? (spiral = spirals[_] || _, cloud) : spiral;
-  };
-
-  cloud.fontSize = function(_) {
-    return arguments.length ? (fontSize = functor(_), cloud) : fontSize;
-  };
-
-  cloud.padding = function(_) {
-    return arguments.length ? (padding = functor(_), cloud) : padding;
-  };
-
-  cloud.random = function(_) {
-    return arguments.length ? (random = _, cloud) : random;
-  };
-
-  cloud.on = function() {
-    var value = event.on.apply(event, arguments);
-    return value === event ? cloud : value;
-  };
-
-  return cloud;
-};
-
-function cloudText(d) {
-  return d.text;
-}
-
-function cloudFont() {
-  return "serif";
-}
-
-function cloudFontNormal() {
-  return "normal";
-}
-
-function cloudFontSize(d) {
-  return Math.sqrt(d.value);
-}
-
-function cloudRotate() {
-  return (~~(Math.random() * 6) - 3) * 30;
-}
-
-function cloudPadding() {
-  return 1;
-}
-
-// Fetches a monochrome sprite bitmap for the specified text.
-// Load in batches for speed.
-function cloudSprite(contextAndRatio, d, data, di) {
-  if (d.sprite) return;
-  var c = contextAndRatio.context,
-      ratio = contextAndRatio.ratio;
-
-  c.clearRect(0, 0, (cw << 5) / ratio, ch / ratio);
-  var x = 0,
-      y = 0,
-      maxh = 0,
-      n = data.length;
-  --di;
-  while (++di < n) {
-    d = data[di];
-    c.save();
-    c.font = d.style + " " + d.weight + " " + ~~((d.size + 1) / ratio) + "px " + d.font;
-    var w = c.measureText(d.text + "m").width * ratio,
-        h = d.size << 1;
-    if (d.rotate) {
-      var sr = Math.sin(d.rotate * cloudRadians),
-          cr = Math.cos(d.rotate * cloudRadians),
-          wcr = w * cr,
-          wsr = w * sr,
-          hcr = h * cr,
-          hsr = h * sr;
-      w = (Math.max(Math.abs(wcr + hsr), Math.abs(wcr - hsr)) + 0x1f) >> 5 << 5;
-      h = ~~Math.max(Math.abs(wsr + hcr), Math.abs(wsr - hcr));
-    } else {
-      w = (w + 0x1f) >> 5 << 5;
-    }
-    if (h > maxh) maxh = h;
-    if (x + w >= (cw << 5)) {
-      x = 0;
-      y += maxh;
-      maxh = 0;
-    }
-    if (y + h >= ch) break;
-    c.translate((x + (w >> 1)) / ratio, (y + (h >> 1)) / ratio);
-    if (d.rotate) c.rotate(d.rotate * cloudRadians);
-    c.fillText(d.text, 0, 0);
-    if (d.padding) c.lineWidth = 2 * d.padding, c.strokeText(d.text, 0, 0);
-    c.restore();
-    d.width = w;
-    d.height = h;
-    d.xoff = x;
-    d.yoff = y;
-    d.x1 = w >> 1;
-    d.y1 = h >> 1;
-    d.x0 = -d.x1;
-    d.y0 = -d.y1;
-    d.hasText = true;
-    x += w;
-  }
-  var pixels = c.getImageData(0, 0, (cw << 5) / ratio, ch / ratio).data,
-      sprite = [];
-  while (--di >= 0) {
-    d = data[di];
-    if (!d.hasText) continue;
-    var w = d.width,
-        w32 = w >> 5,
-        h = d.y1 - d.y0;
-    // Zero the buffer
-    for (var i = 0; i < h * w32; i++) sprite[i] = 0;
-    x = d.xoff;
-    if (x == null) return;
-    y = d.yoff;
-    var seen = 0,
-        seenRow = -1;
-    for (var j = 0; j < h; j++) {
-      for (var i = 0; i < w; i++) {
-        var k = w32 * j + (i >> 5),
-            m = pixels[((y + j) * (cw << 5) + (x + i)) << 2] ? 1 << (31 - (i % 32)) : 0;
-        sprite[k] |= m;
-        seen |= m;
-      }
-      if (seen) seenRow = j;
-      else {
-        d.y0++;
-        h--;
-        j--;
-        y++;
-      }
-    }
-    d.y1 = d.y0 + seenRow;
-    d.sprite = sprite.slice(0, (d.y1 - d.y0) * w32);
-  }
-}
-
-// Use mask-based collision detection.
-function cloudCollide(tag, board, sw) {
-  sw >>= 5;
-  var sprite = tag.sprite,
-      w = tag.width >> 5,
-      lx = tag.x - (w << 4),
-      sx = lx & 0x7f,
-      msx = 32 - sx,
-      h = tag.y1 - tag.y0,
-      x = (tag.y + tag.y0) * sw + (lx >> 5),
-      last;
-  for (var j = 0; j < h; j++) {
-    last = 0;
-    for (var i = 0; i <= w; i++) {
-      if (((last << msx) | (i < w ? (last = sprite[j * w + i]) >>> sx : 0))
-          & board[x + i]) return true;
-    }
-    x += sw;
-  }
-  return false;
-}
-
-function cloudBounds(bounds, d) {
-  var b0 = bounds[0],
-      b1 = bounds[1];
-  if (d.x + d.x0 < b0.x) b0.x = d.x + d.x0;
-  if (d.y + d.y0 < b0.y) b0.y = d.y + d.y0;
-  if (d.x + d.x1 > b1.x) b1.x = d.x + d.x1;
-  if (d.y + d.y1 > b1.y) b1.y = d.y + d.y1;
-}
-
-function collideRects(a, b) {
-  return a.x + a.x1 > b[0].x && a.x + a.x0 < b[1].x && a.y + a.y1 > b[0].y && a.y + a.y0 < b[1].y;
-}
-
-function archimedeanSpiral(size) {
-  var e = size[0] / size[1];
-  return function(t) {
-    return [e * (t *= .1) * Math.cos(t), t * Math.sin(t)];
-  };
-}
-
-function rectangularSpiral(size) {
-  var dy = 4,
-      dx = dy * size[0] / size[1],
-      x = 0,
-      y = 0;
-  return function(t) {
-    var sign = t < 0 ? -1 : 1;
-    // See triangular numbers: T_n = n * (n + 1) / 2.
-    switch ((Math.sqrt(1 + 4 * sign * t) - sign) & 3) {
-      case 0:  x += dx; break;
-      case 1:  y += dy; break;
-      case 2:  x -= dx; break;
-      default: y -= dy; break;
-    }
-    return [x, y];
-  };
-}
-
-// TODO reuse arrays?
-function zeroArray(n) {
-  var a = [],
-      i = -1;
-  while (++i < n) a[i] = 0;
-  return a;
-}
-
-function cloudCanvas() {
-  return document.createElement("canvas");
-}
-
-function functor(d) {
-  return typeof d === "function" ? d : function() { return d; };
-}
-
-var spirals = {
-  archimedean: archimedeanSpiral,
-  rectangular: rectangularSpiral
-};
-
-},{"d3-dispatch":2}],2:[function(require,module,exports){
-// https://d3js.org/d3-dispatch/ Version 1.0.3. Copyright 2017 Mike Bostock.
-(function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
-	typeof define === 'function' && define.amd ? define(['exports'], factory) :
-	(factory((global.d3 = global.d3 || {})));
-}(this, (function (exports) { 'use strict';
-
-var noop = {value: function() {}};
-
-function dispatch() {
-  for (var i = 0, n = arguments.length, _ = {}, t; i < n; ++i) {
-    if (!(t = arguments[i] + "") || (t in _)) throw new Error("illegal type: " + t);
-    _[t] = [];
-  }
-  return new Dispatch(_);
-}
-
-function Dispatch(_) {
-  this._ = _;
-}
-
-function parseTypenames(typenames, types) {
-  return typenames.trim().split(/^|\s+/).map(function(t) {
-    var name = "", i = t.indexOf(".");
-    if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
-    if (t && !types.hasOwnProperty(t)) throw new Error("unknown type: " + t);
-    return {type: t, name: name};
-  });
-}
-
-Dispatch.prototype = dispatch.prototype = {
-  constructor: Dispatch,
-  on: function(typename, callback) {
-    var _ = this._,
-        T = parseTypenames(typename + "", _),
-        t,
-        i = -1,
-        n = T.length;
-
-    // If no callback was specified, return the callback of the given type and name.
-    if (arguments.length < 2) {
-      while (++i < n) if ((t = (typename = T[i]).type) && (t = get(_[t], typename.name))) return t;
-      return;
-    }
-
-    // If a type was specified, set the callback for the given type and name.
-    // Otherwise, if a null callback was specified, remove callbacks of the given name.
-    if (callback != null && typeof callback !== "function") throw new Error("invalid callback: " + callback);
-    while (++i < n) {
-      if (t = (typename = T[i]).type) _[t] = set(_[t], typename.name, callback);
-      else if (callback == null) for (t in _) _[t] = set(_[t], typename.name, null);
-    }
-
-    return this;
-  },
-  copy: function() {
-    var copy = {}, _ = this._;
-    for (var t in _) copy[t] = _[t].slice();
-    return new Dispatch(copy);
-  },
-  call: function(type, that) {
-    if ((n = arguments.length - 2) > 0) for (var args = new Array(n), i = 0, n, t; i < n; ++i) args[i] = arguments[i + 2];
-    if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
-    for (t = this._[type], i = 0, n = t.length; i < n; ++i) t[i].value.apply(that, args);
-  },
-  apply: function(type, that, args) {
-    if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
-    for (var t = this._[type], i = 0, n = t.length; i < n; ++i) t[i].value.apply(that, args);
-  }
-};
-
-function get(type, name) {
-  for (var i = 0, n = type.length, c; i < n; ++i) {
-    if ((c = type[i]).name === name) {
-      return c.value;
-    }
-  }
-}
-
-function set(type, name, callback) {
-  for (var i = 0, n = type.length; i < n; ++i) {
-    if (type[i].name === name) {
-      type[i] = noop, type = type.slice(0, i).concat(type.slice(i + 1));
-      break;
-    }
-  }
-  if (callback != null) type.push({name: name, value: callback});
-  return type;
-}
-
-exports.dispatch = dispatch;
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-})));
-
-},{}]},{},[1])(1)
-});
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"d3-dispatch":11}],8:[function(require,module,exports){
+},{"d3-array":5,"d3-path":22}],9:[function(require,module,exports){
 // https://d3js.org/d3-collection/ v1.0.7 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -3163,7 +3132,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 // https://d3js.org/d3-color/ v1.4.1 Copyright 2020 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -3746,7 +3715,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 // https://d3js.org/d3-contour/ v1.3.2 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-array')) :
@@ -4179,7 +4148,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{"d3-array":3}],11:[function(require,module,exports){
+},{"d3-array":5}],12:[function(require,module,exports){
 // https://d3js.org/d3-dispatch/ v1.0.6 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -4276,7 +4245,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 // https://d3js.org/d3-drag/ v1.2.5 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dispatch'), require('d3-selection')) :
@@ -4512,7 +4481,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-dispatch":11,"d3-selection":27}],13:[function(require,module,exports){
+},{"d3-dispatch":12,"d3-selection":28}],14:[function(require,module,exports){
 // https://d3js.org/d3-dsv/ v1.2.0 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -4747,7 +4716,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 // https://d3js.org/d3-ease/ v1.0.6 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -5008,7 +4977,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 // https://d3js.org/d3-fetch/ v1.2.0 Copyright 2020 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dsv')) :
@@ -5113,7 +5082,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-dsv":13}],16:[function(require,module,exports){
+},{"d3-dsv":14}],17:[function(require,module,exports){
 // https://d3js.org/d3-force/ v1.2.1 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-quadtree'), require('d3-collection'), require('d3-dispatch'), require('d3-timer')) :
@@ -5783,7 +5752,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{"d3-collection":8,"d3-dispatch":11,"d3-quadtree":23,"d3-timer":31}],17:[function(require,module,exports){
+},{"d3-collection":9,"d3-dispatch":12,"d3-quadtree":24,"d3-timer":38}],18:[function(require,module,exports){
 // https://d3js.org/d3-format/ v1.4.4 Copyright 2020 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -6124,7 +6093,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 // https://d3js.org/d3-geo/ v1.12.1 Copyright 2020 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-array')) :
@@ -9291,7 +9260,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{"d3-array":3}],19:[function(require,module,exports){
+},{"d3-array":5}],20:[function(require,module,exports){
 // https://d3js.org/d3-hierarchy/ v1.1.9 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -10583,7 +10552,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 // https://d3js.org/d3-interpolate/ v1.4.0 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-color')) :
@@ -11178,7 +11147,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-color":9}],21:[function(require,module,exports){
+},{"d3-color":10}],22:[function(require,module,exports){
 // https://d3js.org/d3-path/ v1.0.9 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -11321,7 +11290,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 // https://d3js.org/d3-polygon/ v1.0.6 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -11473,7 +11442,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 // https://d3js.org/d3-quadtree/ v1.0.7 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -11894,7 +11863,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 // https://d3js.org/d3-random/ v1.1.2 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -12011,7 +11980,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 // https://d3js.org/d3-scale-chromatic/ v1.5.0 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-interpolate'), require('d3-color')) :
@@ -12534,7 +12503,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-color":9,"d3-interpolate":20}],26:[function(require,module,exports){
+},{"d3-color":10,"d3-interpolate":21}],27:[function(require,module,exports){
 // https://d3js.org/d3-scale/ v2.2.2 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-collection'), require('d3-array'), require('d3-interpolate'), require('d3-format'), require('d3-time'), require('d3-time-format')) :
@@ -13701,7 +13670,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{"d3-array":3,"d3-collection":8,"d3-format":17,"d3-interpolate":20,"d3-time":30,"d3-time-format":29}],27:[function(require,module,exports){
+},{"d3-array":5,"d3-collection":9,"d3-format":18,"d3-interpolate":21,"d3-time":37,"d3-time-format":36}],28:[function(require,module,exports){
 // https://d3js.org/d3-selection/ v1.4.1 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -14692,7 +14661,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 // https://d3js.org/d3-shape/ v1.3.7 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-path')) :
@@ -16643,7 +16612,3797 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-path":21}],29:[function(require,module,exports){
+},{"d3-path":22}],30:[function(require,module,exports){
+(function (global, factory) {
+	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-selection'), require('d3-format'), require('d3-dispatch'), require('d3-scale'), require('d3-array')) :
+	typeof define === 'function' && define.amd ? define(['exports', 'd3-selection', 'd3-format', 'd3-dispatch', 'd3-scale', 'd3-array'], factory) :
+	(factory((global.indexRollup = global.indexRollup || {}),global.d3Selection,global.d3Format,global.d3Dispatch,global.d3Scale,global.d3Array));
+}(this, (function (exports,d3Selection,d3Format,d3Dispatch,d3Scale,d3Array) { 'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
+  return typeof obj;
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+};
+
+var d3_identity = function d3_identity(d) {
+  return d;
+};
+
+var d3_reverse = function d3_reverse(arr) {
+  var mirror = [];
+  for (var i = 0, l = arr.length; i < l; i++) {
+    mirror[i] = arr[l - i - 1];
+  }
+  return mirror;
+};
+
+//Text wrapping code adapted from Mike Bostock
+var d3_textWrapping = function d3_textWrapping(text, width) {
+  text.each(function () {
+    var text = d3Selection.select(this),
+        words = text.text().split(/\s+/).reverse(),
+        word,
+        line = [],
+        lineNumber = 0,
+        lineHeight = 1.2,
+        //ems
+    y = text.attr("y"),
+        dy = parseFloat(text.attr("dy")) || 0,
+        tspan = text.text(null).append("tspan").attr("x", 0).attr("dy", dy + "em");
+
+    while (word = words.pop()) {
+      line.push(word);
+      tspan.text(line.join(" "));
+      if (tspan.node().getComputedTextLength() > width && line.length > 1) {
+        line.pop();
+        tspan.text(line.join(" "));
+        line = [word];
+        tspan = text.append("tspan").attr("x", 0).attr("dy", lineHeight + dy + "em").text(word);
+      }
+    }
+  });
+};
+
+var d3_mergeLabels = function d3_mergeLabels() {
+  var gen = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+  var labels = arguments[1];
+  var domain = arguments[2];
+  var range = arguments[3];
+  var labelDelimiter = arguments[4];
+
+  if ((typeof labels === "undefined" ? "undefined" : _typeof(labels)) === "object") {
+    if (labels.length === 0) return gen;
+
+    var i = labels.length;
+    for (; i < gen.length; i++) {
+      labels.push(gen[i]);
+    }
+    return labels;
+  } else if (typeof labels === "function") {
+    var customLabels = [];
+    var genLength = gen.length;
+    for (var _i = 0; _i < genLength; _i++) {
+      customLabels.push(labels({
+        i: _i,
+        genLength: genLength,
+        generatedLabels: gen,
+        domain: domain,
+        range: range,
+        labelDelimiter: labelDelimiter
+      }));
+    }
+    return customLabels;
+  }
+
+  return gen;
+};
+
+var d3_linearLegend = function d3_linearLegend(scale, cells, labelFormat) {
+  var data = [];
+
+  if (cells.length > 1) {
+    data = cells;
+  } else {
+    var domain = scale.domain(),
+        increment = (domain[domain.length - 1] - domain[0]) / (cells - 1);
+    var i = 0;
+
+    for (; i < cells; i++) {
+      data.push(domain[0] + i * increment);
+    }
+  }
+
+  var labels = data.map(labelFormat);
+  return {
+    data: data,
+    labels: labels,
+    feature: function feature(d) {
+      return scale(d);
+    }
+  };
+};
+
+var d3_quantLegend = function d3_quantLegend(scale, labelFormat, labelDelimiter) {
+  var labels = scale.range().map(function (d) {
+    var invert = scale.invertExtent(d);
+    return labelFormat(invert[0]) + " " + labelDelimiter + " " + labelFormat(invert[1]);
+  });
+
+  return {
+    data: scale.range(),
+    labels: labels,
+    feature: d3_identity
+  };
+};
+
+var d3_ordinalLegend = function d3_ordinalLegend(scale) {
+  return {
+    data: scale.domain(),
+    labels: scale.domain(),
+    feature: function feature(d) {
+      return scale(d);
+    }
+  };
+};
+
+var d3_cellOver = function d3_cellOver(cellDispatcher, d, obj) {
+  cellDispatcher.call("cellover", obj, d);
+};
+
+var d3_cellOut = function d3_cellOut(cellDispatcher, d, obj) {
+  cellDispatcher.call("cellout", obj, d);
+};
+
+var d3_cellClick = function d3_cellClick(cellDispatcher, d, obj) {
+  cellDispatcher.call("cellclick", obj, d);
+};
+
+var helper = {
+  d3_drawShapes: function d3_drawShapes(shape, shapes, shapeHeight, shapeWidth, shapeRadius, path) {
+    if (shape === "rect") {
+      shapes.attr("height", shapeHeight).attr("width", shapeWidth);
+    } else if (shape === "circle") {
+      shapes.attr("r", shapeRadius);
+    } else if (shape === "line") {
+      shapes.attr("x1", 0).attr("x2", shapeWidth).attr("y1", 0).attr("y2", 0);
+    } else if (shape === "path") {
+      shapes.attr("d", path);
+    }
+  },
+
+  d3_addText: function d3_addText(svg, enter, labels, classPrefix, labelWidth) {
+    enter.append("text").attr("class", classPrefix + "label");
+    var text = svg.selectAll("g." + classPrefix + "cell text." + classPrefix + "label").data(labels).text(d3_identity);
+
+    if (labelWidth) {
+      svg.selectAll("g." + classPrefix + "cell text." + classPrefix + "label").call(d3_textWrapping, labelWidth);
+    }
+
+    return text;
+  },
+
+  d3_calcType: function d3_calcType(scale, ascending, cells, labels, labelFormat, labelDelimiter) {
+    var type = scale.invertExtent ? d3_quantLegend(scale, labelFormat, labelDelimiter) : scale.ticks ? d3_linearLegend(scale, cells, labelFormat) : d3_ordinalLegend(scale);
+
+    //for d3.scaleSequential that doesn't have a range function
+    var range = scale.range && scale.range() || scale.domain();
+    type.labels = d3_mergeLabels(type.labels, labels, scale.domain(), range, labelDelimiter);
+
+    if (ascending) {
+      type.labels = d3_reverse(type.labels);
+      type.data = d3_reverse(type.data);
+    }
+
+    return type;
+  },
+
+  d3_filterCells: function d3_filterCells(type, cellFilter) {
+    var filterCells = type.data.map(function (d, i) {
+      return { data: d, label: type.labels[i] };
+    }).filter(cellFilter);
+    var dataValues = filterCells.map(function (d) {
+      return d.data;
+    });
+    var labelValues = filterCells.map(function (d) {
+      return d.label;
+    });
+    type.data = type.data.filter(function (d) {
+      return dataValues.indexOf(d) !== -1;
+    });
+    type.labels = type.labels.filter(function (d) {
+      return labelValues.indexOf(d) !== -1;
+    });
+    return type;
+  },
+
+  d3_placement: function d3_placement(orient, cell, cellTrans, text, textTrans, labelAlign) {
+    cell.attr("transform", cellTrans);
+    text.attr("transform", textTrans);
+    if (orient === "horizontal") {
+      text.style("text-anchor", labelAlign);
+    }
+  },
+
+  d3_addEvents: function d3_addEvents(cells, dispatcher) {
+    cells.on("mouseover.legend", function (d) {
+      d3_cellOver(dispatcher, d, this);
+    }).on("mouseout.legend", function (d) {
+      d3_cellOut(dispatcher, d, this);
+    }).on("click.legend", function (d) {
+      d3_cellClick(dispatcher, d, this);
+    });
+  },
+
+  d3_title: function d3_title(svg, title, classPrefix, titleWidth) {
+    if (title !== "") {
+      var titleText = svg.selectAll("text." + classPrefix + "legendTitle");
+
+      titleText.data([title]).enter().append("text").attr("class", classPrefix + "legendTitle");
+
+      svg.selectAll("text." + classPrefix + "legendTitle").text(title);
+
+      if (titleWidth) {
+        svg.selectAll("text." + classPrefix + "legendTitle").call(d3_textWrapping, titleWidth);
+      }
+
+      var cellsSvg = svg.select("." + classPrefix + "legendCells");
+      var yOffset = svg.select("." + classPrefix + "legendTitle").nodes().map(function (d) {
+        return d.getBBox().height;
+      })[0],
+          xOffset = -cellsSvg.nodes().map(function (d) {
+        return d.getBBox().x;
+      })[0];
+      cellsSvg.attr("transform", "translate(" + xOffset + "," + yOffset + ")");
+    }
+  },
+
+  d3_defaultLocale: {
+    format: d3Format.format,
+    formatPrefix: d3Format.formatPrefix
+  },
+
+  d3_defaultFormatSpecifier: ".01f",
+
+  d3_defaultDelimiter: "to"
+};
+
+function color() {
+  var scale = d3Scale.scaleLinear(),
+      shape = "rect",
+      shapeWidth = 15,
+      shapeHeight = 15,
+      shapeRadius = 10,
+      shapePadding = 2,
+      cells = [5],
+      cellFilter = void 0,
+      labels = [],
+      classPrefix = "",
+      useClass = false,
+      title = "",
+      locale = helper.d3_defaultLocale,
+      specifier = helper.d3_defaultFormatSpecifier,
+      labelOffset = 10,
+      labelAlign = "middle",
+      labelDelimiter = helper.d3_defaultDelimiter,
+      labelWrap = void 0,
+      orient = "vertical",
+      ascending = false,
+      path = void 0,
+      titleWidth = void 0,
+      legendDispatcher = d3Dispatch.dispatch("cellover", "cellout", "cellclick");
+
+  function legend(svg) {
+    var type = helper.d3_calcType(scale, ascending, cells, labels, locale.format(specifier), labelDelimiter),
+        legendG = svg.selectAll("g").data([scale]);
+
+    legendG.enter().append("g").attr("class", classPrefix + "legendCells");
+
+    if (cellFilter) {
+      helper.d3_filterCells(type, cellFilter);
+    }
+
+    var cell = svg.select("." + classPrefix + "legendCells").selectAll("." + classPrefix + "cell").data(type.data);
+
+    var cellEnter = cell.enter().append("g").attr("class", classPrefix + "cell");
+    cellEnter.append(shape).attr("class", classPrefix + "swatch");
+
+    var shapes = svg.selectAll("g." + classPrefix + "cell " + shape + "." + classPrefix + "swatch").data(type.data);
+
+    //add event handlers
+    helper.d3_addEvents(cellEnter, legendDispatcher);
+
+    cell.exit().transition().style("opacity", 0).remove();
+    shapes.exit().transition().style("opacity", 0).remove();
+
+    shapes = shapes.merge(shapes);
+
+    helper.d3_drawShapes(shape, shapes, shapeHeight, shapeWidth, shapeRadius, path);
+    var text = helper.d3_addText(svg, cellEnter, type.labels, classPrefix, labelWrap);
+
+    // we need to merge the selection, otherwise changes in the legend (e.g. change of orientation) are applied only to the new cells and not the existing ones.
+    cell = cellEnter.merge(cell);
+
+    // sets placement
+    var textSize = text.nodes().map(function (d) {
+      return d.getBBox();
+    }),
+        shapeSize = shapes.nodes().map(function (d) {
+      return d.getBBox();
+    });
+    //sets scale
+    //everything is fill except for line which is stroke,
+    if (!useClass) {
+      if (shape == "line") {
+        shapes.style("stroke", type.feature);
+      } else {
+        shapes.style("fill", type.feature);
+      }
+    } else {
+      shapes.attr("class", function (d) {
+        return classPrefix + "swatch " + type.feature(d);
+      });
+    }
+
+    var cellTrans = void 0,
+        textTrans = void 0,
+        textAlign = labelAlign == "start" ? 0 : labelAlign == "middle" ? 0.5 : 1;
+
+    //positions cells and text
+    if (orient === "vertical") {
+      (function () {
+        var cellSize = textSize.map(function (d, i) {
+          return Math.max(d.height, shapeSize[i].height);
+        });
+
+        cellTrans = function cellTrans(d, i) {
+          var height = d3Array.sum(cellSize.slice(0, i));
+          return "translate(0, " + (height + i * shapePadding) + ")";
+        };
+
+        textTrans = function textTrans(d, i) {
+          return "translate( " + (shapeSize[i].width + shapeSize[i].x + labelOffset) + ", " + (shapeSize[i].y + shapeSize[i].height / 2 + 5) + ")";
+        };
+      })();
+    } else if (orient === "horizontal") {
+      cellTrans = function cellTrans(d, i) {
+        return "translate(" + i * (shapeSize[i].width + shapePadding) + ",0)";
+      };
+      textTrans = function textTrans(d, i) {
+        return "translate(" + (shapeSize[i].width * textAlign + shapeSize[i].x) + ",\n          " + (shapeSize[i].height + shapeSize[i].y + labelOffset + 8) + ")";
+      };
+    }
+
+    helper.d3_placement(orient, cell, cellTrans, text, textTrans, labelAlign);
+    helper.d3_title(svg, title, classPrefix, titleWidth);
+
+    cell.transition().style("opacity", 1);
+  }
+
+  legend.scale = function (_) {
+    if (!arguments.length) return scale;
+    scale = _;
+    return legend;
+  };
+
+  legend.cells = function (_) {
+    if (!arguments.length) return cells;
+    if (_.length > 1 || _ >= 2) {
+      cells = _;
+    }
+    return legend;
+  };
+
+  legend.cellFilter = function (_) {
+    if (!arguments.length) return cellFilter;
+    cellFilter = _;
+    return legend;
+  };
+
+  legend.shape = function (_, d) {
+    if (!arguments.length) return shape;
+    if (_ == "rect" || _ == "circle" || _ == "line" || _ == "path" && typeof d === "string") {
+      shape = _;
+      path = d;
+    }
+    return legend;
+  };
+
+  legend.shapeWidth = function (_) {
+    if (!arguments.length) return shapeWidth;
+    shapeWidth = +_;
+    return legend;
+  };
+
+  legend.shapeHeight = function (_) {
+    if (!arguments.length) return shapeHeight;
+    shapeHeight = +_;
+    return legend;
+  };
+
+  legend.shapeRadius = function (_) {
+    if (!arguments.length) return shapeRadius;
+    shapeRadius = +_;
+    return legend;
+  };
+
+  legend.shapePadding = function (_) {
+    if (!arguments.length) return shapePadding;
+    shapePadding = +_;
+    return legend;
+  };
+
+  legend.labels = function (_) {
+    if (!arguments.length) return labels;
+    labels = _;
+    return legend;
+  };
+
+  legend.labelAlign = function (_) {
+    if (!arguments.length) return labelAlign;
+    if (_ == "start" || _ == "end" || _ == "middle") {
+      labelAlign = _;
+    }
+    return legend;
+  };
+
+  legend.locale = function (_) {
+    if (!arguments.length) return locale;
+    locale = d3Format.formatLocale(_);
+    return legend;
+  };
+
+  legend.labelFormat = function (_) {
+    if (!arguments.length) return legend.locale().format(specifier);
+    specifier = d3Format.formatSpecifier(_);
+    return legend;
+  };
+
+  legend.labelOffset = function (_) {
+    if (!arguments.length) return labelOffset;
+    labelOffset = +_;
+    return legend;
+  };
+
+  legend.labelDelimiter = function (_) {
+    if (!arguments.length) return labelDelimiter;
+    labelDelimiter = _;
+    return legend;
+  };
+
+  legend.labelWrap = function (_) {
+    if (!arguments.length) return labelWrap;
+    labelWrap = _;
+    return legend;
+  };
+
+  legend.useClass = function (_) {
+    if (!arguments.length) return useClass;
+    if (_ === true || _ === false) {
+      useClass = _;
+    }
+    return legend;
+  };
+
+  legend.orient = function (_) {
+    if (!arguments.length) return orient;
+    _ = _.toLowerCase();
+    if (_ == "horizontal" || _ == "vertical") {
+      orient = _;
+    }
+    return legend;
+  };
+
+  legend.ascending = function (_) {
+    if (!arguments.length) return ascending;
+    ascending = !!_;
+    return legend;
+  };
+
+  legend.classPrefix = function (_) {
+    if (!arguments.length) return classPrefix;
+    classPrefix = _;
+    return legend;
+  };
+
+  legend.title = function (_) {
+    if (!arguments.length) return title;
+    title = _;
+    return legend;
+  };
+
+  legend.titleWidth = function (_) {
+    if (!arguments.length) return titleWidth;
+    titleWidth = _;
+    return legend;
+  };
+
+  legend.textWrap = function (_) {
+    if (!arguments.length) return textWrap;
+    textWrap = _;
+    return legend;
+  };
+
+  legend.on = function () {
+    var value = legendDispatcher.on.apply(legendDispatcher, arguments);
+    return value === legendDispatcher ? legend : value;
+  };
+
+  return legend;
+}
+
+function size() {
+  var scale = d3Scale.scaleLinear(),
+      shape = "rect",
+      shapeWidth = 15,
+      shapePadding = 2,
+      cells = [5],
+      cellFilter = void 0,
+      labels = [],
+      classPrefix = "",
+      title = "",
+      locale = helper.d3_defaultLocale,
+      specifier = helper.d3_defaultFormatSpecifier,
+      labelOffset = 10,
+      labelAlign = "middle",
+      labelDelimiter = helper.d3_defaultDelimiter,
+      labelWrap = void 0,
+      orient = "vertical",
+      ascending = false,
+      path = void 0,
+      titleWidth = void 0,
+      legendDispatcher = d3Dispatch.dispatch("cellover", "cellout", "cellclick");
+
+  function legend(svg) {
+    var type = helper.d3_calcType(scale, ascending, cells, labels, locale.format(specifier), labelDelimiter),
+        legendG = svg.selectAll("g").data([scale]);
+
+    if (cellFilter) {
+      helper.d3_filterCells(type, cellFilter);
+    }
+
+    legendG.enter().append("g").attr("class", classPrefix + "legendCells");
+
+    var cell = svg.select("." + classPrefix + "legendCells").selectAll("." + classPrefix + "cell").data(type.data);
+    var cellEnter = cell.enter().append("g").attr("class", classPrefix + "cell");
+    cellEnter.append(shape).attr("class", classPrefix + "swatch");
+
+    var shapes = svg.selectAll("g." + classPrefix + "cell " + shape + "." + classPrefix + "swatch");
+
+    //add event handlers
+    helper.d3_addEvents(cellEnter, legendDispatcher);
+
+    cell.exit().transition().style("opacity", 0).remove();
+
+    shapes.exit().transition().style("opacity", 0).remove();
+    shapes = shapes.merge(shapes);
+
+    //creates shape
+    if (shape === "line") {
+      helper.d3_drawShapes(shape, shapes, 0, shapeWidth);
+      shapes.attr("stroke-width", type.feature);
+    } else {
+      helper.d3_drawShapes(shape, shapes, type.feature, type.feature, type.feature, path);
+    }
+
+    var text = helper.d3_addText(svg, cellEnter, type.labels, classPrefix, labelWrap);
+
+    // we need to merge the selection, otherwise changes in the legend (e.g. change of orientation) are applied only to the new cells and not the existing ones.
+    cell = cellEnter.merge(cell);
+
+    //sets placement
+
+    var textSize = text.nodes().map(function (d) {
+      return d.getBBox();
+    }),
+        shapeSize = shapes.nodes().map(function (d, i) {
+      var bbox = d.getBBox();
+      var stroke = scale(type.data[i]);
+
+      if (shape === "line" && orient === "horizontal") {
+        bbox.height = bbox.height + stroke;
+      } else if (shape === "line" && orient === "vertical") {
+        bbox.width = bbox.width;
+      }
+      return bbox;
+    });
+
+    var maxH = d3Array.max(shapeSize, function (d) {
+      return d.height + d.y;
+    }),
+        maxW = d3Array.max(shapeSize, function (d) {
+      return d.width + d.x;
+    });
+
+    var cellTrans = void 0,
+        textTrans = void 0,
+        textAlign = labelAlign == "start" ? 0 : labelAlign == "middle" ? 0.5 : 1;
+
+    //positions cells and text
+    if (orient === "vertical") {
+      (function () {
+        var cellSize = textSize.map(function (d, i) {
+          return Math.max(d.height, shapeSize[i].height);
+        });
+        var y = shape == "circle" || shape == "line" ? shapeSize[0].height / 2 : 0;
+        cellTrans = function cellTrans(d, i) {
+          var height = d3Array.sum(cellSize.slice(0, i));
+
+          return "translate(0, " + (y + height + i * shapePadding) + ")";
+        };
+
+        textTrans = function textTrans(d, i) {
+          return "translate( " + (maxW + labelOffset) + ",\n          " + (shapeSize[i].y + shapeSize[i].height / 2 + 5) + ")";
+        };
+      })();
+    } else if (orient === "horizontal") {
+      (function () {
+        cellTrans = function cellTrans(d, i) {
+          var width = d3Array.sum(shapeSize.slice(0, i), function (d) {
+            return d.width;
+          });
+          var y = shape == "circle" || shape == "line" ? maxH / 2 : 0;
+          return "translate(" + (width + i * shapePadding) + ", " + y + ")";
+        };
+
+        var offset = shape == "line" ? maxH / 2 : maxH;
+        textTrans = function textTrans(d, i) {
+          return "translate( " + (shapeSize[i].width * textAlign + shapeSize[i].x) + ",\n              " + (offset + labelOffset) + ")";
+        };
+      })();
+    }
+
+    helper.d3_placement(orient, cell, cellTrans, text, textTrans, labelAlign);
+    helper.d3_title(svg, title, classPrefix, titleWidth);
+
+    cell.transition().style("opacity", 1);
+  }
+
+  legend.scale = function (_) {
+    if (!arguments.length) return scale;
+    scale = _;
+    return legend;
+  };
+
+  legend.cells = function (_) {
+    if (!arguments.length) return cells;
+    if (_.length > 1 || _ >= 2) {
+      cells = _;
+    }
+    return legend;
+  };
+
+  legend.cellFilter = function (_) {
+    if (!arguments.length) return cellFilter;
+    cellFilter = _;
+    return legend;
+  };
+
+  legend.shape = function (_, d) {
+    if (!arguments.length) return shape;
+    if (_ == "rect" || _ == "circle" || _ == "line") {
+      shape = _;
+      path = d;
+    }
+    return legend;
+  };
+
+  legend.shapeWidth = function (_) {
+    if (!arguments.length) return shapeWidth;
+    shapeWidth = +_;
+    return legend;
+  };
+
+  legend.shapePadding = function (_) {
+    if (!arguments.length) return shapePadding;
+    shapePadding = +_;
+    return legend;
+  };
+
+  legend.labels = function (_) {
+    if (!arguments.length) return labels;
+    labels = _;
+    return legend;
+  };
+
+  legend.labelAlign = function (_) {
+    if (!arguments.length) return labelAlign;
+    if (_ == "start" || _ == "end" || _ == "middle") {
+      labelAlign = _;
+    }
+    return legend;
+  };
+
+  legend.locale = function (_) {
+    if (!arguments.length) return locale;
+    locale = d3Format.formatLocale(_);
+    return legend;
+  };
+
+  legend.labelFormat = function (_) {
+    if (!arguments.length) return legend.locale().format(specifier);
+    specifier = d3Format.formatSpecifier(_);
+    return legend;
+  };
+
+  legend.labelOffset = function (_) {
+    if (!arguments.length) return labelOffset;
+    labelOffset = +_;
+    return legend;
+  };
+
+  legend.labelDelimiter = function (_) {
+    if (!arguments.length) return labelDelimiter;
+    labelDelimiter = _;
+    return legend;
+  };
+
+  legend.labelWrap = function (_) {
+    if (!arguments.length) return labelWrap;
+    labelWrap = _;
+    return legend;
+  };
+
+  legend.orient = function (_) {
+    if (!arguments.length) return orient;
+    _ = _.toLowerCase();
+    if (_ == "horizontal" || _ == "vertical") {
+      orient = _;
+    }
+    return legend;
+  };
+
+  legend.ascending = function (_) {
+    if (!arguments.length) return ascending;
+    ascending = !!_;
+    return legend;
+  };
+
+  legend.classPrefix = function (_) {
+    if (!arguments.length) return classPrefix;
+    classPrefix = _;
+    return legend;
+  };
+
+  legend.title = function (_) {
+    if (!arguments.length) return title;
+    title = _;
+    return legend;
+  };
+
+  legend.titleWidth = function (_) {
+    if (!arguments.length) return titleWidth;
+    titleWidth = _;
+    return legend;
+  };
+
+  legend.on = function () {
+    var value = legendDispatcher.on.apply(legendDispatcher, arguments);
+    return value === legendDispatcher ? legend : value;
+  };
+
+  return legend;
+}
+
+function symbol() {
+  var scale = d3Scale.scaleLinear(),
+      shape = "path",
+      shapeWidth = 15,
+      shapeHeight = 15,
+      shapeRadius = 10,
+      shapePadding = 5,
+      cells = [5],
+      cellFilter = void 0,
+      labels = [],
+      classPrefix = "",
+      title = "",
+      locale = helper.d3_defaultLocale,
+      specifier = helper.d3_defaultFormatSpecifier,
+      labelAlign = "middle",
+      labelOffset = 10,
+      labelDelimiter = helper.d3_defaultDelimiter,
+      labelWrap = void 0,
+      orient = "vertical",
+      ascending = false,
+      titleWidth = void 0,
+      legendDispatcher = d3Dispatch.dispatch("cellover", "cellout", "cellclick");
+
+  function legend(svg) {
+    var type = helper.d3_calcType(scale, ascending, cells, labels, locale.format(specifier), labelDelimiter),
+        legendG = svg.selectAll("g").data([scale]);
+
+    if (cellFilter) {
+      helper.d3_filterCells(type, cellFilter);
+    }
+
+    legendG.enter().append("g").attr("class", classPrefix + "legendCells");
+
+    var cell = svg.select("." + classPrefix + "legendCells").selectAll("." + classPrefix + "cell").data(type.data);
+    var cellEnter = cell.enter().append("g").attr("class", classPrefix + "cell");
+    cellEnter.append(shape).attr("class", classPrefix + "swatch");
+
+    var shapes = svg.selectAll("g." + classPrefix + "cell " + shape + "." + classPrefix + "swatch");
+
+    //add event handlers
+    helper.d3_addEvents(cellEnter, legendDispatcher);
+
+    //remove old shapes
+    cell.exit().transition().style("opacity", 0).remove();
+    shapes.exit().transition().style("opacity", 0).remove();
+    shapes = shapes.merge(shapes);
+
+    helper.d3_drawShapes(shape, shapes, shapeHeight, shapeWidth, shapeRadius, type.feature);
+    var text = helper.d3_addText(svg, cellEnter, type.labels, classPrefix, labelWrap);
+
+    // we need to merge the selection, otherwise changes in the legend (e.g. change of orientation) are applied only to the new cells and not the existing ones.
+    cell = cellEnter.merge(cell);
+
+    // sets placement
+    var textSize = text.nodes().map(function (d) {
+      return d.getBBox();
+    }),
+        shapeSize = shapes.nodes().map(function (d) {
+      return d.getBBox();
+    });
+
+    var maxH = d3Array.max(shapeSize, function (d) {
+      return d.height;
+    }),
+        maxW = d3Array.max(shapeSize, function (d) {
+      return d.width;
+    });
+
+    var cellTrans = void 0,
+        textTrans = void 0,
+        textAlign = labelAlign == "start" ? 0 : labelAlign == "middle" ? 0.5 : 1;
+
+    //positions cells and text
+    if (orient === "vertical") {
+      (function () {
+        var cellSize = textSize.map(function (d, i) {
+          return Math.max(maxH, d.height);
+        });
+
+        cellTrans = function cellTrans(d, i) {
+          var height = d3Array.sum(cellSize.slice(0, i));
+          return "translate(0, " + (height + i * shapePadding) + " )";
+        };
+        textTrans = function textTrans(d, i) {
+          return "translate( " + (maxW + labelOffset) + ",\n              " + (shapeSize[i].y + shapeSize[i].height / 2 + 5) + ")";
+        };
+      })();
+    } else if (orient === "horizontal") {
+      cellTrans = function cellTrans(d, i) {
+        return "translate( " + i * (maxW + shapePadding) + ",0)";
+      };
+      textTrans = function textTrans(d, i) {
+        return "translate( " + (shapeSize[i].width * textAlign + shapeSize[i].x) + ",\n              " + (maxH + labelOffset) + ")";
+      };
+    }
+
+    helper.d3_placement(orient, cell, cellTrans, text, textTrans, labelAlign);
+    helper.d3_title(svg, title, classPrefix, titleWidth);
+    cell.transition().style("opacity", 1);
+  }
+
+  legend.scale = function (_) {
+    if (!arguments.length) return scale;
+    scale = _;
+    return legend;
+  };
+
+  legend.cells = function (_) {
+    if (!arguments.length) return cells;
+    if (_.length > 1 || _ >= 2) {
+      cells = _;
+    }
+    return legend;
+  };
+
+  legend.cellFilter = function (_) {
+    if (!arguments.length) return cellFilter;
+    cellFilter = _;
+    return legend;
+  };
+
+  legend.shapePadding = function (_) {
+    if (!arguments.length) return shapePadding;
+    shapePadding = +_;
+    return legend;
+  };
+
+  legend.labels = function (_) {
+    if (!arguments.length) return labels;
+    labels = _;
+    return legend;
+  };
+
+  legend.labelAlign = function (_) {
+    if (!arguments.length) return labelAlign;
+    if (_ == "start" || _ == "end" || _ == "middle") {
+      labelAlign = _;
+    }
+    return legend;
+  };
+
+  legend.locale = function (_) {
+    if (!arguments.length) return locale;
+    locale = d3Format.formatLocale(_);
+    return legend;
+  };
+
+  legend.labelFormat = function (_) {
+    if (!arguments.length) return legend.locale().format(specifier);
+    specifier = d3Format.formatSpecifier(_);
+    return legend;
+  };
+
+  legend.labelOffset = function (_) {
+    if (!arguments.length) return labelOffset;
+    labelOffset = +_;
+    return legend;
+  };
+
+  legend.labelDelimiter = function (_) {
+    if (!arguments.length) return labelDelimiter;
+    labelDelimiter = _;
+    return legend;
+  };
+
+  legend.labelWrap = function (_) {
+    if (!arguments.length) return labelWrap;
+    labelWrap = _;
+    return legend;
+  };
+
+  legend.orient = function (_) {
+    if (!arguments.length) return orient;
+    _ = _.toLowerCase();
+    if (_ == "horizontal" || _ == "vertical") {
+      orient = _;
+    }
+    return legend;
+  };
+
+  legend.ascending = function (_) {
+    if (!arguments.length) return ascending;
+    ascending = !!_;
+    return legend;
+  };
+
+  legend.classPrefix = function (_) {
+    if (!arguments.length) return classPrefix;
+    classPrefix = _;
+    return legend;
+  };
+
+  legend.title = function (_) {
+    if (!arguments.length) return title;
+    title = _;
+    return legend;
+  };
+
+  legend.titleWidth = function (_) {
+    if (!arguments.length) return titleWidth;
+    titleWidth = _;
+    return legend;
+  };
+
+  legend.on = function () {
+    var value = legendDispatcher.on.apply(legendDispatcher, arguments);
+    return value === legendDispatcher ? legend : value;
+  };
+
+  return legend;
+}
+
+var thresholdLabels = function thresholdLabels(_ref) {
+  var i = _ref.i,
+      genLength = _ref.genLength,
+      generatedLabels = _ref.generatedLabels,
+      labelDelimiter = _ref.labelDelimiter;
+
+  if (i === 0) {
+    var values = generatedLabels[i].split(" " + labelDelimiter + " ");
+    return "Less than " + values[1];
+  } else if (i === genLength - 1) {
+    var _values = generatedLabels[i].split(" " + labelDelimiter + " ");
+    return _values[0] + " or more";
+  }
+  return generatedLabels[i];
+};
+
+var legendHelpers = {
+  thresholdLabels: thresholdLabels
+};
+
+var index = {
+  legendColor: color,
+  legendSize: size,
+  legendSymbol: symbol,
+  legendHelpers: legendHelpers
+};
+
+exports.legendColor = color;
+exports.legendSize = size;
+exports.legendSymbol = symbol;
+exports.legendHelpers = legendHelpers;
+exports['default'] = index;
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+})));
+
+
+},{"d3-array":31,"d3-dispatch":32,"d3-format":33,"d3-scale":34,"d3-selection":35}],31:[function(require,module,exports){
+// https://d3js.org/d3-array/ Version 1.0.1. Copyright 2016 Mike Bostock.
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (factory((global.d3 = global.d3 || {})));
+}(this, function (exports) { 'use strict';
+
+  function ascending(a, b) {
+    return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
+  }
+
+  function bisector(compare) {
+    if (compare.length === 1) compare = ascendingComparator(compare);
+    return {
+      left: function(a, x, lo, hi) {
+        if (lo == null) lo = 0;
+        if (hi == null) hi = a.length;
+        while (lo < hi) {
+          var mid = lo + hi >>> 1;
+          if (compare(a[mid], x) < 0) lo = mid + 1;
+          else hi = mid;
+        }
+        return lo;
+      },
+      right: function(a, x, lo, hi) {
+        if (lo == null) lo = 0;
+        if (hi == null) hi = a.length;
+        while (lo < hi) {
+          var mid = lo + hi >>> 1;
+          if (compare(a[mid], x) > 0) hi = mid;
+          else lo = mid + 1;
+        }
+        return lo;
+      }
+    };
+  }
+
+  function ascendingComparator(f) {
+    return function(d, x) {
+      return ascending(f(d), x);
+    };
+  }
+
+  var ascendingBisect = bisector(ascending);
+  var bisectRight = ascendingBisect.right;
+  var bisectLeft = ascendingBisect.left;
+
+  function descending(a, b) {
+    return b < a ? -1 : b > a ? 1 : b >= a ? 0 : NaN;
+  }
+
+  function number(x) {
+    return x === null ? NaN : +x;
+  }
+
+  function variance(array, f) {
+    var n = array.length,
+        m = 0,
+        a,
+        d,
+        s = 0,
+        i = -1,
+        j = 0;
+
+    if (f == null) {
+      while (++i < n) {
+        if (!isNaN(a = number(array[i]))) {
+          d = a - m;
+          m += d / ++j;
+          s += d * (a - m);
+        }
+      }
+    }
+
+    else {
+      while (++i < n) {
+        if (!isNaN(a = number(f(array[i], i, array)))) {
+          d = a - m;
+          m += d / ++j;
+          s += d * (a - m);
+        }
+      }
+    }
+
+    if (j > 1) return s / (j - 1);
+  }
+
+  function deviation(array, f) {
+    var v = variance(array, f);
+    return v ? Math.sqrt(v) : v;
+  }
+
+  function extent(array, f) {
+    var i = -1,
+        n = array.length,
+        a,
+        b,
+        c;
+
+    if (f == null) {
+      while (++i < n) if ((b = array[i]) != null && b >= b) { a = c = b; break; }
+      while (++i < n) if ((b = array[i]) != null) {
+        if (a > b) a = b;
+        if (c < b) c = b;
+      }
+    }
+
+    else {
+      while (++i < n) if ((b = f(array[i], i, array)) != null && b >= b) { a = c = b; break; }
+      while (++i < n) if ((b = f(array[i], i, array)) != null) {
+        if (a > b) a = b;
+        if (c < b) c = b;
+      }
+    }
+
+    return [a, c];
+  }
+
+  var array = Array.prototype;
+
+  var slice = array.slice;
+  var map = array.map;
+
+  function constant(x) {
+    return function() {
+      return x;
+    };
+  }
+
+  function identity(x) {
+    return x;
+  }
+
+  function range(start, stop, step) {
+    start = +start, stop = +stop, step = (n = arguments.length) < 2 ? (stop = start, start = 0, 1) : n < 3 ? 1 : +step;
+
+    var i = -1,
+        n = Math.max(0, Math.ceil((stop - start) / step)) | 0,
+        range = new Array(n);
+
+    while (++i < n) {
+      range[i] = start + i * step;
+    }
+
+    return range;
+  }
+
+  var e10 = Math.sqrt(50);
+  var e5 = Math.sqrt(10);
+  var e2 = Math.sqrt(2);
+  function ticks(start, stop, count) {
+    var step = tickStep(start, stop, count);
+    return range(
+      Math.ceil(start / step) * step,
+      Math.floor(stop / step) * step + step / 2, // inclusive
+      step
+    );
+  }
+
+  function tickStep(start, stop, count) {
+    var step0 = Math.abs(stop - start) / Math.max(0, count),
+        step1 = Math.pow(10, Math.floor(Math.log(step0) / Math.LN10)),
+        error = step0 / step1;
+    if (error >= e10) step1 *= 10;
+    else if (error >= e5) step1 *= 5;
+    else if (error >= e2) step1 *= 2;
+    return stop < start ? -step1 : step1;
+  }
+
+  function sturges(values) {
+    return Math.ceil(Math.log(values.length) / Math.LN2) + 1;
+  }
+
+  function histogram() {
+    var value = identity,
+        domain = extent,
+        threshold = sturges;
+
+    function histogram(data) {
+      var i,
+          n = data.length,
+          x,
+          values = new Array(n);
+
+      for (i = 0; i < n; ++i) {
+        values[i] = value(data[i], i, data);
+      }
+
+      var xz = domain(values),
+          x0 = xz[0],
+          x1 = xz[1],
+          tz = threshold(values, x0, x1);
+
+      // Convert number of thresholds into uniform thresholds.
+      if (!Array.isArray(tz)) tz = ticks(x0, x1, tz);
+
+      // Remove any thresholds outside the domain.
+      var m = tz.length;
+      while (tz[0] <= x0) tz.shift(), --m;
+      while (tz[m - 1] >= x1) tz.pop(), --m;
+
+      var bins = new Array(m + 1),
+          bin;
+
+      // Initialize bins.
+      for (i = 0; i <= m; ++i) {
+        bin = bins[i] = [];
+        bin.x0 = i > 0 ? tz[i - 1] : x0;
+        bin.x1 = i < m ? tz[i] : x1;
+      }
+
+      // Assign data to bins by value, ignoring any outside the domain.
+      for (i = 0; i < n; ++i) {
+        x = values[i];
+        if (x0 <= x && x <= x1) {
+          bins[bisectRight(tz, x, 0, m)].push(data[i]);
+        }
+      }
+
+      return bins;
+    }
+
+    histogram.value = function(_) {
+      return arguments.length ? (value = typeof _ === "function" ? _ : constant(_), histogram) : value;
+    };
+
+    histogram.domain = function(_) {
+      return arguments.length ? (domain = typeof _ === "function" ? _ : constant([_[0], _[1]]), histogram) : domain;
+    };
+
+    histogram.thresholds = function(_) {
+      return arguments.length ? (threshold = typeof _ === "function" ? _ : Array.isArray(_) ? constant(slice.call(_)) : constant(_), histogram) : threshold;
+    };
+
+    return histogram;
+  }
+
+  function quantile(array, p, f) {
+    if (f == null) f = number;
+    if (!(n = array.length)) return;
+    if ((p = +p) <= 0 || n < 2) return +f(array[0], 0, array);
+    if (p >= 1) return +f(array[n - 1], n - 1, array);
+    var n,
+        h = (n - 1) * p,
+        i = Math.floor(h),
+        a = +f(array[i], i, array),
+        b = +f(array[i + 1], i + 1, array);
+    return a + (b - a) * (h - i);
+  }
+
+  function freedmanDiaconis(values, min, max) {
+    values = map.call(values, number).sort(ascending);
+    return Math.ceil((max - min) / (2 * (quantile(values, 0.75) - quantile(values, 0.25)) * Math.pow(values.length, -1 / 3)));
+  }
+
+  function scott(values, min, max) {
+    return Math.ceil((max - min) / (3.5 * deviation(values) * Math.pow(values.length, -1 / 3)));
+  }
+
+  function max(array, f) {
+    var i = -1,
+        n = array.length,
+        a,
+        b;
+
+    if (f == null) {
+      while (++i < n) if ((b = array[i]) != null && b >= b) { a = b; break; }
+      while (++i < n) if ((b = array[i]) != null && b > a) a = b;
+    }
+
+    else {
+      while (++i < n) if ((b = f(array[i], i, array)) != null && b >= b) { a = b; break; }
+      while (++i < n) if ((b = f(array[i], i, array)) != null && b > a) a = b;
+    }
+
+    return a;
+  }
+
+  function mean(array, f) {
+    var s = 0,
+        n = array.length,
+        a,
+        i = -1,
+        j = n;
+
+    if (f == null) {
+      while (++i < n) if (!isNaN(a = number(array[i]))) s += a; else --j;
+    }
+
+    else {
+      while (++i < n) if (!isNaN(a = number(f(array[i], i, array)))) s += a; else --j;
+    }
+
+    if (j) return s / j;
+  }
+
+  function median(array, f) {
+    var numbers = [],
+        n = array.length,
+        a,
+        i = -1;
+
+    if (f == null) {
+      while (++i < n) if (!isNaN(a = number(array[i]))) numbers.push(a);
+    }
+
+    else {
+      while (++i < n) if (!isNaN(a = number(f(array[i], i, array)))) numbers.push(a);
+    }
+
+    return quantile(numbers.sort(ascending), 0.5);
+  }
+
+  function merge(arrays) {
+    var n = arrays.length,
+        m,
+        i = -1,
+        j = 0,
+        merged,
+        array;
+
+    while (++i < n) j += arrays[i].length;
+    merged = new Array(j);
+
+    while (--n >= 0) {
+      array = arrays[n];
+      m = array.length;
+      while (--m >= 0) {
+        merged[--j] = array[m];
+      }
+    }
+
+    return merged;
+  }
+
+  function min(array, f) {
+    var i = -1,
+        n = array.length,
+        a,
+        b;
+
+    if (f == null) {
+      while (++i < n) if ((b = array[i]) != null && b >= b) { a = b; break; }
+      while (++i < n) if ((b = array[i]) != null && a > b) a = b;
+    }
+
+    else {
+      while (++i < n) if ((b = f(array[i], i, array)) != null && b >= b) { a = b; break; }
+      while (++i < n) if ((b = f(array[i], i, array)) != null && a > b) a = b;
+    }
+
+    return a;
+  }
+
+  function pairs(array) {
+    var i = 0, n = array.length - 1, p = array[0], pairs = new Array(n < 0 ? 0 : n);
+    while (i < n) pairs[i] = [p, p = array[++i]];
+    return pairs;
+  }
+
+  function permute(array, indexes) {
+    var i = indexes.length, permutes = new Array(i);
+    while (i--) permutes[i] = array[indexes[i]];
+    return permutes;
+  }
+
+  function scan(array, compare) {
+    if (!(n = array.length)) return;
+    var i = 0,
+        n,
+        j = 0,
+        xi,
+        xj = array[j];
+
+    if (!compare) compare = ascending;
+
+    while (++i < n) if (compare(xi = array[i], xj) < 0 || compare(xj, xj) !== 0) xj = xi, j = i;
+
+    if (compare(xj, xj) === 0) return j;
+  }
+
+  function shuffle(array, i0, i1) {
+    var m = (i1 == null ? array.length : i1) - (i0 = i0 == null ? 0 : +i0),
+        t,
+        i;
+
+    while (m) {
+      i = Math.random() * m-- | 0;
+      t = array[m + i0];
+      array[m + i0] = array[i + i0];
+      array[i + i0] = t;
+    }
+
+    return array;
+  }
+
+  function sum(array, f) {
+    var s = 0,
+        n = array.length,
+        a,
+        i = -1;
+
+    if (f == null) {
+      while (++i < n) if (a = +array[i]) s += a; // Note: zero and null are equivalent.
+    }
+
+    else {
+      while (++i < n) if (a = +f(array[i], i, array)) s += a;
+    }
+
+    return s;
+  }
+
+  function transpose(matrix) {
+    if (!(n = matrix.length)) return [];
+    for (var i = -1, m = min(matrix, length), transpose = new Array(m); ++i < m;) {
+      for (var j = -1, n, row = transpose[i] = new Array(n); ++j < n;) {
+        row[j] = matrix[j][i];
+      }
+    }
+    return transpose;
+  }
+
+  function length(d) {
+    return d.length;
+  }
+
+  function zip() {
+    return transpose(arguments);
+  }
+
+  exports.bisect = bisectRight;
+  exports.bisectRight = bisectRight;
+  exports.bisectLeft = bisectLeft;
+  exports.ascending = ascending;
+  exports.bisector = bisector;
+  exports.descending = descending;
+  exports.deviation = deviation;
+  exports.extent = extent;
+  exports.histogram = histogram;
+  exports.thresholdFreedmanDiaconis = freedmanDiaconis;
+  exports.thresholdScott = scott;
+  exports.thresholdSturges = sturges;
+  exports.max = max;
+  exports.mean = mean;
+  exports.median = median;
+  exports.merge = merge;
+  exports.min = min;
+  exports.pairs = pairs;
+  exports.permute = permute;
+  exports.quantile = quantile;
+  exports.range = range;
+  exports.scan = scan;
+  exports.shuffle = shuffle;
+  exports.sum = sum;
+  exports.ticks = ticks;
+  exports.tickStep = tickStep;
+  exports.transpose = transpose;
+  exports.variance = variance;
+  exports.zip = zip;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
+
+}));
+},{}],32:[function(require,module,exports){
+// https://d3js.org/d3-dispatch/ Version 1.0.1. Copyright 2016 Mike Bostock.
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (factory((global.d3 = global.d3 || {})));
+}(this, function (exports) { 'use strict';
+
+  var noop = {value: function() {}};
+
+  function dispatch() {
+    for (var i = 0, n = arguments.length, _ = {}, t; i < n; ++i) {
+      if (!(t = arguments[i] + "") || (t in _)) throw new Error("illegal type: " + t);
+      _[t] = [];
+    }
+    return new Dispatch(_);
+  }
+
+  function Dispatch(_) {
+    this._ = _;
+  }
+
+  function parseTypenames(typenames, types) {
+    return typenames.trim().split(/^|\s+/).map(function(t) {
+      var name = "", i = t.indexOf(".");
+      if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
+      if (t && !types.hasOwnProperty(t)) throw new Error("unknown type: " + t);
+      return {type: t, name: name};
+    });
+  }
+
+  Dispatch.prototype = dispatch.prototype = {
+    constructor: Dispatch,
+    on: function(typename, callback) {
+      var _ = this._,
+          T = parseTypenames(typename + "", _),
+          t,
+          i = -1,
+          n = T.length;
+
+      // If no callback was specified, return the callback of the given type and name.
+      if (arguments.length < 2) {
+        while (++i < n) if ((t = (typename = T[i]).type) && (t = get(_[t], typename.name))) return t;
+        return;
+      }
+
+      // If a type was specified, set the callback for the given type and name.
+      // Otherwise, if a null callback was specified, remove callbacks of the given name.
+      if (callback != null && typeof callback !== "function") throw new Error("invalid callback: " + callback);
+      while (++i < n) {
+        if (t = (typename = T[i]).type) _[t] = set(_[t], typename.name, callback);
+        else if (callback == null) for (t in _) _[t] = set(_[t], typename.name, null);
+      }
+
+      return this;
+    },
+    copy: function() {
+      var copy = {}, _ = this._;
+      for (var t in _) copy[t] = _[t].slice();
+      return new Dispatch(copy);
+    },
+    call: function(type, that) {
+      if ((n = arguments.length - 2) > 0) for (var args = new Array(n), i = 0, n, t; i < n; ++i) args[i] = arguments[i + 2];
+      if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
+      for (t = this._[type], i = 0, n = t.length; i < n; ++i) t[i].value.apply(that, args);
+    },
+    apply: function(type, that, args) {
+      if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
+      for (var t = this._[type], i = 0, n = t.length; i < n; ++i) t[i].value.apply(that, args);
+    }
+  };
+
+  function get(type, name) {
+    for (var i = 0, n = type.length, c; i < n; ++i) {
+      if ((c = type[i]).name === name) {
+        return c.value;
+      }
+    }
+  }
+
+  function set(type, name, callback) {
+    for (var i = 0, n = type.length; i < n; ++i) {
+      if (type[i].name === name) {
+        type[i] = noop, type = type.slice(0, i).concat(type.slice(i + 1));
+        break;
+      }
+    }
+    if (callback != null) type.push({name: name, value: callback});
+    return type;
+  }
+
+  exports.dispatch = dispatch;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
+
+}));
+},{}],33:[function(require,module,exports){
+// https://d3js.org/d3-format/ Version 1.0.2. Copyright 2016 Mike Bostock.
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (factory((global.d3 = global.d3 || {})));
+}(this, function (exports) { 'use strict';
+
+  // Computes the decimal coefficient and exponent of the specified number x with
+  // significant digits p, where x is positive and p is in [1, 21] or undefined.
+  // For example, formatDecimal(1.23) returns ["123", 0].
+  function formatDecimal(x, p) {
+    if ((i = (x = p ? x.toExponential(p - 1) : x.toExponential()).indexOf("e")) < 0) return null; // NaN, ±Infinity
+    var i, coefficient = x.slice(0, i);
+
+    // The string returned by toExponential either has the form \d\.\d+e[-+]\d+
+    // (e.g., 1.2e+3) or the form \de[-+]\d+ (e.g., 1e+3).
+    return [
+      coefficient.length > 1 ? coefficient[0] + coefficient.slice(2) : coefficient,
+      +x.slice(i + 1)
+    ];
+  }
+
+  function exponent(x) {
+    return x = formatDecimal(Math.abs(x)), x ? x[1] : NaN;
+  }
+
+  function formatGroup(grouping, thousands) {
+    return function(value, width) {
+      var i = value.length,
+          t = [],
+          j = 0,
+          g = grouping[0],
+          length = 0;
+
+      while (i > 0 && g > 0) {
+        if (length + g + 1 > width) g = Math.max(1, width - length);
+        t.push(value.substring(i -= g, i + g));
+        if ((length += g + 1) > width) break;
+        g = grouping[j = (j + 1) % grouping.length];
+      }
+
+      return t.reverse().join(thousands);
+    };
+  }
+
+  function formatDefault(x, p) {
+    x = x.toPrecision(p);
+
+    out: for (var n = x.length, i = 1, i0 = -1, i1; i < n; ++i) {
+      switch (x[i]) {
+        case ".": i0 = i1 = i; break;
+        case "0": if (i0 === 0) i0 = i; i1 = i; break;
+        case "e": break out;
+        default: if (i0 > 0) i0 = 0; break;
+      }
+    }
+
+    return i0 > 0 ? x.slice(0, i0) + x.slice(i1 + 1) : x;
+  }
+
+  var prefixExponent;
+
+  function formatPrefixAuto(x, p) {
+    var d = formatDecimal(x, p);
+    if (!d) return x + "";
+    var coefficient = d[0],
+        exponent = d[1],
+        i = exponent - (prefixExponent = Math.max(-8, Math.min(8, Math.floor(exponent / 3))) * 3) + 1,
+        n = coefficient.length;
+    return i === n ? coefficient
+        : i > n ? coefficient + new Array(i - n + 1).join("0")
+        : i > 0 ? coefficient.slice(0, i) + "." + coefficient.slice(i)
+        : "0." + new Array(1 - i).join("0") + formatDecimal(x, Math.max(0, p + i - 1))[0]; // less than 1y!
+  }
+
+  function formatRounded(x, p) {
+    var d = formatDecimal(x, p);
+    if (!d) return x + "";
+    var coefficient = d[0],
+        exponent = d[1];
+    return exponent < 0 ? "0." + new Array(-exponent).join("0") + coefficient
+        : coefficient.length > exponent + 1 ? coefficient.slice(0, exponent + 1) + "." + coefficient.slice(exponent + 1)
+        : coefficient + new Array(exponent - coefficient.length + 2).join("0");
+  }
+
+  var formatTypes = {
+    "": formatDefault,
+    "%": function(x, p) { return (x * 100).toFixed(p); },
+    "b": function(x) { return Math.round(x).toString(2); },
+    "c": function(x) { return x + ""; },
+    "d": function(x) { return Math.round(x).toString(10); },
+    "e": function(x, p) { return x.toExponential(p); },
+    "f": function(x, p) { return x.toFixed(p); },
+    "g": function(x, p) { return x.toPrecision(p); },
+    "o": function(x) { return Math.round(x).toString(8); },
+    "p": function(x, p) { return formatRounded(x * 100, p); },
+    "r": formatRounded,
+    "s": formatPrefixAuto,
+    "X": function(x) { return Math.round(x).toString(16).toUpperCase(); },
+    "x": function(x) { return Math.round(x).toString(16); }
+  };
+
+  // [[fill]align][sign][symbol][0][width][,][.precision][type]
+  var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
+
+  function formatSpecifier(specifier) {
+    return new FormatSpecifier(specifier);
+  }
+
+  function FormatSpecifier(specifier) {
+    if (!(match = re.exec(specifier))) throw new Error("invalid format: " + specifier);
+
+    var match,
+        fill = match[1] || " ",
+        align = match[2] || ">",
+        sign = match[3] || "-",
+        symbol = match[4] || "",
+        zero = !!match[5],
+        width = match[6] && +match[6],
+        comma = !!match[7],
+        precision = match[8] && +match[8].slice(1),
+        type = match[9] || "";
+
+    // The "n" type is an alias for ",g".
+    if (type === "n") comma = true, type = "g";
+
+    // Map invalid types to the default format.
+    else if (!formatTypes[type]) type = "";
+
+    // If zero fill is specified, padding goes after sign and before digits.
+    if (zero || (fill === "0" && align === "=")) zero = true, fill = "0", align = "=";
+
+    this.fill = fill;
+    this.align = align;
+    this.sign = sign;
+    this.symbol = symbol;
+    this.zero = zero;
+    this.width = width;
+    this.comma = comma;
+    this.precision = precision;
+    this.type = type;
+  }
+
+  FormatSpecifier.prototype.toString = function() {
+    return this.fill
+        + this.align
+        + this.sign
+        + this.symbol
+        + (this.zero ? "0" : "")
+        + (this.width == null ? "" : Math.max(1, this.width | 0))
+        + (this.comma ? "," : "")
+        + (this.precision == null ? "" : "." + Math.max(0, this.precision | 0))
+        + this.type;
+  };
+
+  var prefixes = ["y","z","a","f","p","n","µ","m","","k","M","G","T","P","E","Z","Y"];
+
+  function identity(x) {
+    return x;
+  }
+
+  function formatLocale(locale) {
+    var group = locale.grouping && locale.thousands ? formatGroup(locale.grouping, locale.thousands) : identity,
+        currency = locale.currency,
+        decimal = locale.decimal;
+
+    function newFormat(specifier) {
+      specifier = formatSpecifier(specifier);
+
+      var fill = specifier.fill,
+          align = specifier.align,
+          sign = specifier.sign,
+          symbol = specifier.symbol,
+          zero = specifier.zero,
+          width = specifier.width,
+          comma = specifier.comma,
+          precision = specifier.precision,
+          type = specifier.type;
+
+      // Compute the prefix and suffix.
+      // For SI-prefix, the suffix is lazily computed.
+      var prefix = symbol === "$" ? currency[0] : symbol === "#" && /[boxX]/.test(type) ? "0" + type.toLowerCase() : "",
+          suffix = symbol === "$" ? currency[1] : /[%p]/.test(type) ? "%" : "";
+
+      // What format function should we use?
+      // Is this an integer type?
+      // Can this type generate exponential notation?
+      var formatType = formatTypes[type],
+          maybeSuffix = !type || /[defgprs%]/.test(type);
+
+      // Set the default precision if not specified,
+      // or clamp the specified precision to the supported range.
+      // For significant precision, it must be in [1, 21].
+      // For fixed precision, it must be in [0, 20].
+      precision = precision == null ? (type ? 6 : 12)
+          : /[gprs]/.test(type) ? Math.max(1, Math.min(21, precision))
+          : Math.max(0, Math.min(20, precision));
+
+      function format(value) {
+        var valuePrefix = prefix,
+            valueSuffix = suffix,
+            i, n, c;
+
+        if (type === "c") {
+          valueSuffix = formatType(value) + valueSuffix;
+          value = "";
+        } else {
+          value = +value;
+
+          // Convert negative to positive, and compute the prefix.
+          // Note that -0 is not less than 0, but 1 / -0 is!
+          var valueNegative = (value < 0 || 1 / value < 0) && (value *= -1, true);
+
+          // Perform the initial formatting.
+          value = formatType(value, precision);
+
+          // If the original value was negative, it may be rounded to zero during
+          // formatting; treat this as (positive) zero.
+          if (valueNegative) {
+            i = -1, n = value.length;
+            valueNegative = false;
+            while (++i < n) {
+              if (c = value.charCodeAt(i), (48 < c && c < 58)
+                  || (type === "x" && 96 < c && c < 103)
+                  || (type === "X" && 64 < c && c < 71)) {
+                valueNegative = true;
+                break;
+              }
+            }
+          }
+
+          // Compute the prefix and suffix.
+          valuePrefix = (valueNegative ? (sign === "(" ? sign : "-") : sign === "-" || sign === "(" ? "" : sign) + valuePrefix;
+          valueSuffix = valueSuffix + (type === "s" ? prefixes[8 + prefixExponent / 3] : "") + (valueNegative && sign === "(" ? ")" : "");
+
+          // Break the formatted value into the integer “value” part that can be
+          // grouped, and fractional or exponential “suffix” part that is not.
+          if (maybeSuffix) {
+            i = -1, n = value.length;
+            while (++i < n) {
+              if (c = value.charCodeAt(i), 48 > c || c > 57) {
+                valueSuffix = (c === 46 ? decimal + value.slice(i + 1) : value.slice(i)) + valueSuffix;
+                value = value.slice(0, i);
+                break;
+              }
+            }
+          }
+        }
+
+        // If the fill character is not "0", grouping is applied before padding.
+        if (comma && !zero) value = group(value, Infinity);
+
+        // Compute the padding.
+        var length = valuePrefix.length + value.length + valueSuffix.length,
+            padding = length < width ? new Array(width - length + 1).join(fill) : "";
+
+        // If the fill character is "0", grouping is applied after padding.
+        if (comma && zero) value = group(padding + value, padding.length ? width - valueSuffix.length : Infinity), padding = "";
+
+        // Reconstruct the final output based on the desired alignment.
+        switch (align) {
+          case "<": return valuePrefix + value + valueSuffix + padding;
+          case "=": return valuePrefix + padding + value + valueSuffix;
+          case "^": return padding.slice(0, length = padding.length >> 1) + valuePrefix + value + valueSuffix + padding.slice(length);
+        }
+        return padding + valuePrefix + value + valueSuffix;
+      }
+
+      format.toString = function() {
+        return specifier + "";
+      };
+
+      return format;
+    }
+
+    function formatPrefix(specifier, value) {
+      var f = newFormat((specifier = formatSpecifier(specifier), specifier.type = "f", specifier)),
+          e = Math.max(-8, Math.min(8, Math.floor(exponent(value) / 3))) * 3,
+          k = Math.pow(10, -e),
+          prefix = prefixes[8 + e / 3];
+      return function(value) {
+        return f(k * value) + prefix;
+      };
+    }
+
+    return {
+      format: newFormat,
+      formatPrefix: formatPrefix
+    };
+  }
+
+  var locale;
+  defaultLocale({
+    decimal: ".",
+    thousands: ",",
+    grouping: [3],
+    currency: ["$", ""]
+  });
+
+  function defaultLocale(definition) {
+    locale = formatLocale(definition);
+    exports.format = locale.format;
+    exports.formatPrefix = locale.formatPrefix;
+    return locale;
+  }
+
+  function precisionFixed(step) {
+    return Math.max(0, -exponent(Math.abs(step)));
+  }
+
+  function precisionPrefix(step, value) {
+    return Math.max(0, Math.max(-8, Math.min(8, Math.floor(exponent(value) / 3))) * 3 - exponent(Math.abs(step)));
+  }
+
+  function precisionRound(step, max) {
+    step = Math.abs(step), max = Math.abs(max) - step;
+    return Math.max(0, exponent(max) - exponent(step)) + 1;
+  }
+
+  exports.formatDefaultLocale = defaultLocale;
+  exports.formatLocale = formatLocale;
+  exports.formatSpecifier = formatSpecifier;
+  exports.precisionFixed = precisionFixed;
+  exports.precisionPrefix = precisionPrefix;
+  exports.precisionRound = precisionRound;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
+
+}));
+},{}],34:[function(require,module,exports){
+// https://d3js.org/d3-scale/ Version 1.0.3. Copyright 2016 Mike Bostock.
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-array'), require('d3-collection'), require('d3-interpolate'), require('d3-format'), require('d3-time'), require('d3-time-format'), require('d3-color')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'd3-array', 'd3-collection', 'd3-interpolate', 'd3-format', 'd3-time', 'd3-time-format', 'd3-color'], factory) :
+  (factory((global.d3 = global.d3 || {}),global.d3,global.d3,global.d3,global.d3,global.d3,global.d3,global.d3));
+}(this, function (exports,d3Array,d3Collection,d3Interpolate,d3Format,d3Time,d3TimeFormat,d3Color) { 'use strict';
+
+  var array = Array.prototype;
+
+  var map$1 = array.map;
+  var slice = array.slice;
+
+  var implicit = {name: "implicit"};
+
+  function ordinal(range) {
+    var index = d3Collection.map(),
+        domain = [],
+        unknown = implicit;
+
+    range = range == null ? [] : slice.call(range);
+
+    function scale(d) {
+      var key = d + "", i = index.get(key);
+      if (!i) {
+        if (unknown !== implicit) return unknown;
+        index.set(key, i = domain.push(d));
+      }
+      return range[(i - 1) % range.length];
+    }
+
+    scale.domain = function(_) {
+      if (!arguments.length) return domain.slice();
+      domain = [], index = d3Collection.map();
+      var i = -1, n = _.length, d, key;
+      while (++i < n) if (!index.has(key = (d = _[i]) + "")) index.set(key, domain.push(d));
+      return scale;
+    };
+
+    scale.range = function(_) {
+      return arguments.length ? (range = slice.call(_), scale) : range.slice();
+    };
+
+    scale.unknown = function(_) {
+      return arguments.length ? (unknown = _, scale) : unknown;
+    };
+
+    scale.copy = function() {
+      return ordinal()
+          .domain(domain)
+          .range(range)
+          .unknown(unknown);
+    };
+
+    return scale;
+  }
+
+  function band() {
+    var scale = ordinal().unknown(undefined),
+        domain = scale.domain,
+        ordinalRange = scale.range,
+        range = [0, 1],
+        step,
+        bandwidth,
+        round = false,
+        paddingInner = 0,
+        paddingOuter = 0,
+        align = 0.5;
+
+    delete scale.unknown;
+
+    function rescale() {
+      var n = domain().length,
+          reverse = range[1] < range[0],
+          start = range[reverse - 0],
+          stop = range[1 - reverse];
+      step = (stop - start) / Math.max(1, n - paddingInner + paddingOuter * 2);
+      if (round) step = Math.floor(step);
+      start += (stop - start - step * (n - paddingInner)) * align;
+      bandwidth = step * (1 - paddingInner);
+      if (round) start = Math.round(start), bandwidth = Math.round(bandwidth);
+      var values = d3Array.range(n).map(function(i) { return start + step * i; });
+      return ordinalRange(reverse ? values.reverse() : values);
+    }
+
+    scale.domain = function(_) {
+      return arguments.length ? (domain(_), rescale()) : domain();
+    };
+
+    scale.range = function(_) {
+      return arguments.length ? (range = [+_[0], +_[1]], rescale()) : range.slice();
+    };
+
+    scale.rangeRound = function(_) {
+      return range = [+_[0], +_[1]], round = true, rescale();
+    };
+
+    scale.bandwidth = function() {
+      return bandwidth;
+    };
+
+    scale.step = function() {
+      return step;
+    };
+
+    scale.round = function(_) {
+      return arguments.length ? (round = !!_, rescale()) : round;
+    };
+
+    scale.padding = function(_) {
+      return arguments.length ? (paddingInner = paddingOuter = Math.max(0, Math.min(1, _)), rescale()) : paddingInner;
+    };
+
+    scale.paddingInner = function(_) {
+      return arguments.length ? (paddingInner = Math.max(0, Math.min(1, _)), rescale()) : paddingInner;
+    };
+
+    scale.paddingOuter = function(_) {
+      return arguments.length ? (paddingOuter = Math.max(0, Math.min(1, _)), rescale()) : paddingOuter;
+    };
+
+    scale.align = function(_) {
+      return arguments.length ? (align = Math.max(0, Math.min(1, _)), rescale()) : align;
+    };
+
+    scale.copy = function() {
+      return band()
+          .domain(domain())
+          .range(range)
+          .round(round)
+          .paddingInner(paddingInner)
+          .paddingOuter(paddingOuter)
+          .align(align);
+    };
+
+    return rescale();
+  }
+
+  function pointish(scale) {
+    var copy = scale.copy;
+
+    scale.padding = scale.paddingOuter;
+    delete scale.paddingInner;
+    delete scale.paddingOuter;
+
+    scale.copy = function() {
+      return pointish(copy());
+    };
+
+    return scale;
+  }
+
+  function point() {
+    return pointish(band().paddingInner(1));
+  }
+
+  function constant(x) {
+    return function() {
+      return x;
+    };
+  }
+
+  function number(x) {
+    return +x;
+  }
+
+  var unit = [0, 1];
+
+  function deinterpolate(a, b) {
+    return (b -= (a = +a))
+        ? function(x) { return (x - a) / b; }
+        : constant(b);
+  }
+
+  function deinterpolateClamp(deinterpolate) {
+    return function(a, b) {
+      var d = deinterpolate(a = +a, b = +b);
+      return function(x) { return x <= a ? 0 : x >= b ? 1 : d(x); };
+    };
+  }
+
+  function reinterpolateClamp(reinterpolate) {
+    return function(a, b) {
+      var r = reinterpolate(a = +a, b = +b);
+      return function(t) { return t <= 0 ? a : t >= 1 ? b : r(t); };
+    };
+  }
+
+  function bimap(domain, range, deinterpolate, reinterpolate) {
+    var d0 = domain[0], d1 = domain[1], r0 = range[0], r1 = range[1];
+    if (d1 < d0) d0 = deinterpolate(d1, d0), r0 = reinterpolate(r1, r0);
+    else d0 = deinterpolate(d0, d1), r0 = reinterpolate(r0, r1);
+    return function(x) { return r0(d0(x)); };
+  }
+
+  function polymap(domain, range, deinterpolate, reinterpolate) {
+    var j = Math.min(domain.length, range.length) - 1,
+        d = new Array(j),
+        r = new Array(j),
+        i = -1;
+
+    // Reverse descending domains.
+    if (domain[j] < domain[0]) {
+      domain = domain.slice().reverse();
+      range = range.slice().reverse();
+    }
+
+    while (++i < j) {
+      d[i] = deinterpolate(domain[i], domain[i + 1]);
+      r[i] = reinterpolate(range[i], range[i + 1]);
+    }
+
+    return function(x) {
+      var i = d3Array.bisect(domain, x, 1, j) - 1;
+      return r[i](d[i](x));
+    };
+  }
+
+  function copy(source, target) {
+    return target
+        .domain(source.domain())
+        .range(source.range())
+        .interpolate(source.interpolate())
+        .clamp(source.clamp());
+  }
+
+  // deinterpolate(a, b)(x) takes a domain value x in [a,b] and returns the corresponding parameter t in [0,1].
+  // reinterpolate(a, b)(t) takes a parameter t in [0,1] and returns the corresponding domain value x in [a,b].
+  function continuous(deinterpolate$$, reinterpolate) {
+    var domain = unit,
+        range = unit,
+        interpolate = d3Interpolate.interpolate,
+        clamp = false,
+        piecewise,
+        output,
+        input;
+
+    function rescale() {
+      piecewise = Math.min(domain.length, range.length) > 2 ? polymap : bimap;
+      output = input = null;
+      return scale;
+    }
+
+    function scale(x) {
+      return (output || (output = piecewise(domain, range, clamp ? deinterpolateClamp(deinterpolate$$) : deinterpolate$$, interpolate)))(+x);
+    }
+
+    scale.invert = function(y) {
+      return (input || (input = piecewise(range, domain, deinterpolate, clamp ? reinterpolateClamp(reinterpolate) : reinterpolate)))(+y);
+    };
+
+    scale.domain = function(_) {
+      return arguments.length ? (domain = map$1.call(_, number), rescale()) : domain.slice();
+    };
+
+    scale.range = function(_) {
+      return arguments.length ? (range = slice.call(_), rescale()) : range.slice();
+    };
+
+    scale.rangeRound = function(_) {
+      return range = slice.call(_), interpolate = d3Interpolate.interpolateRound, rescale();
+    };
+
+    scale.clamp = function(_) {
+      return arguments.length ? (clamp = !!_, rescale()) : clamp;
+    };
+
+    scale.interpolate = function(_) {
+      return arguments.length ? (interpolate = _, rescale()) : interpolate;
+    };
+
+    return rescale();
+  }
+
+  function tickFormat(domain, count, specifier) {
+    var start = domain[0],
+        stop = domain[domain.length - 1],
+        step = d3Array.tickStep(start, stop, count == null ? 10 : count),
+        precision;
+    specifier = d3Format.formatSpecifier(specifier == null ? ",f" : specifier);
+    switch (specifier.type) {
+      case "s": {
+        var value = Math.max(Math.abs(start), Math.abs(stop));
+        if (specifier.precision == null && !isNaN(precision = d3Format.precisionPrefix(step, value))) specifier.precision = precision;
+        return d3Format.formatPrefix(specifier, value);
+      }
+      case "":
+      case "e":
+      case "g":
+      case "p":
+      case "r": {
+        if (specifier.precision == null && !isNaN(precision = d3Format.precisionRound(step, Math.max(Math.abs(start), Math.abs(stop))))) specifier.precision = precision - (specifier.type === "e");
+        break;
+      }
+      case "f":
+      case "%": {
+        if (specifier.precision == null && !isNaN(precision = d3Format.precisionFixed(step))) specifier.precision = precision - (specifier.type === "%") * 2;
+        break;
+      }
+    }
+    return d3Format.format(specifier);
+  }
+
+  function linearish(scale) {
+    var domain = scale.domain;
+
+    scale.ticks = function(count) {
+      var d = domain();
+      return d3Array.ticks(d[0], d[d.length - 1], count == null ? 10 : count);
+    };
+
+    scale.tickFormat = function(count, specifier) {
+      return tickFormat(domain(), count, specifier);
+    };
+
+    scale.nice = function(count) {
+      var d = domain(),
+          i = d.length - 1,
+          n = count == null ? 10 : count,
+          start = d[0],
+          stop = d[i],
+          step = d3Array.tickStep(start, stop, n);
+
+      if (step) {
+        step = d3Array.tickStep(Math.floor(start / step) * step, Math.ceil(stop / step) * step, n);
+        d[0] = Math.floor(start / step) * step;
+        d[i] = Math.ceil(stop / step) * step;
+        domain(d);
+      }
+
+      return scale;
+    };
+
+    return scale;
+  }
+
+  function linear() {
+    var scale = continuous(deinterpolate, d3Interpolate.interpolateNumber);
+
+    scale.copy = function() {
+      return copy(scale, linear());
+    };
+
+    return linearish(scale);
+  }
+
+  function identity() {
+    var domain = [0, 1];
+
+    function scale(x) {
+      return +x;
+    }
+
+    scale.invert = scale;
+
+    scale.domain = scale.range = function(_) {
+      return arguments.length ? (domain = map$1.call(_, number), scale) : domain.slice();
+    };
+
+    scale.copy = function() {
+      return identity().domain(domain);
+    };
+
+    return linearish(scale);
+  }
+
+  function nice(domain, interval) {
+    domain = domain.slice();
+
+    var i0 = 0,
+        i1 = domain.length - 1,
+        x0 = domain[i0],
+        x1 = domain[i1],
+        t;
+
+    if (x1 < x0) {
+      t = i0, i0 = i1, i1 = t;
+      t = x0, x0 = x1, x1 = t;
+    }
+
+    domain[i0] = interval.floor(x0);
+    domain[i1] = interval.ceil(x1);
+    return domain;
+  }
+
+  function deinterpolate$1(a, b) {
+    return (b = Math.log(b / a))
+        ? function(x) { return Math.log(x / a) / b; }
+        : constant(b);
+  }
+
+  function reinterpolate(a, b) {
+    return a < 0
+        ? function(t) { return -Math.pow(-b, t) * Math.pow(-a, 1 - t); }
+        : function(t) { return Math.pow(b, t) * Math.pow(a, 1 - t); };
+  }
+
+  function pow10(x) {
+    return isFinite(x) ? +("1e" + x) : x < 0 ? 0 : x;
+  }
+
+  function powp(base) {
+    return base === 10 ? pow10
+        : base === Math.E ? Math.exp
+        : function(x) { return Math.pow(base, x); };
+  }
+
+  function logp(base) {
+    return base === Math.E ? Math.log
+        : base === 10 && Math.log10
+        || base === 2 && Math.log2
+        || (base = Math.log(base), function(x) { return Math.log(x) / base; });
+  }
+
+  function reflect(f) {
+    return function(x) {
+      return -f(-x);
+    };
+  }
+
+  function log() {
+    var scale = continuous(deinterpolate$1, reinterpolate).domain([1, 10]),
+        domain = scale.domain,
+        base = 10,
+        logs = logp(10),
+        pows = powp(10);
+
+    function rescale() {
+      logs = logp(base), pows = powp(base);
+      if (domain()[0] < 0) logs = reflect(logs), pows = reflect(pows);
+      return scale;
+    }
+
+    scale.base = function(_) {
+      return arguments.length ? (base = +_, rescale()) : base;
+    };
+
+    scale.domain = function(_) {
+      return arguments.length ? (domain(_), rescale()) : domain();
+    };
+
+    scale.ticks = function(count) {
+      var d = domain(),
+          u = d[0],
+          v = d[d.length - 1],
+          r;
+
+      if (r = v < u) i = u, u = v, v = i;
+
+      var i = logs(u),
+          j = logs(v),
+          p,
+          k,
+          t,
+          n = count == null ? 10 : +count,
+          z = [];
+
+      if (!(base % 1) && j - i < n) {
+        i = Math.round(i) - 1, j = Math.round(j) + 1;
+        if (u > 0) for (; i < j; ++i) {
+          for (k = 1, p = pows(i); k < base; ++k) {
+            t = p * k;
+            if (t < u) continue;
+            if (t > v) break;
+            z.push(t);
+          }
+        } else for (; i < j; ++i) {
+          for (k = base - 1, p = pows(i); k >= 1; --k) {
+            t = p * k;
+            if (t < u) continue;
+            if (t > v) break;
+            z.push(t);
+          }
+        }
+      } else {
+        z = d3Array.ticks(i, j, Math.min(j - i, n)).map(pows);
+      }
+
+      return r ? z.reverse() : z;
+    };
+
+    scale.tickFormat = function(count, specifier) {
+      if (specifier == null) specifier = base === 10 ? ".0e" : ",";
+      if (typeof specifier !== "function") specifier = d3Format.format(specifier);
+      if (count === Infinity) return specifier;
+      if (count == null) count = 10;
+      var k = Math.max(1, base * count / scale.ticks().length); // TODO fast estimate?
+      return function(d) {
+        var i = d / pows(Math.round(logs(d)));
+        if (i * base < base - 0.5) i *= base;
+        return i <= k ? specifier(d) : "";
+      };
+    };
+
+    scale.nice = function() {
+      return domain(nice(domain(), {
+        floor: function(x) { return pows(Math.floor(logs(x))); },
+        ceil: function(x) { return pows(Math.ceil(logs(x))); }
+      }));
+    };
+
+    scale.copy = function() {
+      return copy(scale, log().base(base));
+    };
+
+    return scale;
+  }
+
+  function raise(x, exponent) {
+    return x < 0 ? -Math.pow(-x, exponent) : Math.pow(x, exponent);
+  }
+
+  function pow() {
+    var exponent = 1,
+        scale = continuous(deinterpolate, reinterpolate),
+        domain = scale.domain;
+
+    function deinterpolate(a, b) {
+      return (b = raise(b, exponent) - (a = raise(a, exponent)))
+          ? function(x) { return (raise(x, exponent) - a) / b; }
+          : constant(b);
+    }
+
+    function reinterpolate(a, b) {
+      b = raise(b, exponent) - (a = raise(a, exponent));
+      return function(t) { return raise(a + b * t, 1 / exponent); };
+    }
+
+    scale.exponent = function(_) {
+      return arguments.length ? (exponent = +_, domain(domain())) : exponent;
+    };
+
+    scale.copy = function() {
+      return copy(scale, pow().exponent(exponent));
+    };
+
+    return linearish(scale);
+  }
+
+  function sqrt() {
+    return pow().exponent(0.5);
+  }
+
+  function quantile$1() {
+    var domain = [],
+        range = [],
+        thresholds = [];
+
+    function rescale() {
+      var i = 0, n = Math.max(1, range.length);
+      thresholds = new Array(n - 1);
+      while (++i < n) thresholds[i - 1] = d3Array.quantile(domain, i / n);
+      return scale;
+    }
+
+    function scale(x) {
+      if (!isNaN(x = +x)) return range[d3Array.bisect(thresholds, x)];
+    }
+
+    scale.invertExtent = function(y) {
+      var i = range.indexOf(y);
+      return i < 0 ? [NaN, NaN] : [
+        i > 0 ? thresholds[i - 1] : domain[0],
+        i < thresholds.length ? thresholds[i] : domain[domain.length - 1]
+      ];
+    };
+
+    scale.domain = function(_) {
+      if (!arguments.length) return domain.slice();
+      domain = [];
+      for (var i = 0, n = _.length, d; i < n; ++i) if (d = _[i], d != null && !isNaN(d = +d)) domain.push(d);
+      domain.sort(d3Array.ascending);
+      return rescale();
+    };
+
+    scale.range = function(_) {
+      return arguments.length ? (range = slice.call(_), rescale()) : range.slice();
+    };
+
+    scale.quantiles = function() {
+      return thresholds.slice();
+    };
+
+    scale.copy = function() {
+      return quantile$1()
+          .domain(domain)
+          .range(range);
+    };
+
+    return scale;
+  }
+
+  function quantize() {
+    var x0 = 0,
+        x1 = 1,
+        n = 1,
+        domain = [0.5],
+        range = [0, 1];
+
+    function scale(x) {
+      if (x <= x) return range[d3Array.bisect(domain, x, 0, n)];
+    }
+
+    function rescale() {
+      var i = -1;
+      domain = new Array(n);
+      while (++i < n) domain[i] = ((i + 1) * x1 - (i - n) * x0) / (n + 1);
+      return scale;
+    }
+
+    scale.domain = function(_) {
+      return arguments.length ? (x0 = +_[0], x1 = +_[1], rescale()) : [x0, x1];
+    };
+
+    scale.range = function(_) {
+      return arguments.length ? (n = (range = slice.call(_)).length - 1, rescale()) : range.slice();
+    };
+
+    scale.invertExtent = function(y) {
+      var i = range.indexOf(y);
+      return i < 0 ? [NaN, NaN]
+          : i < 1 ? [x0, domain[0]]
+          : i >= n ? [domain[n - 1], x1]
+          : [domain[i - 1], domain[i]];
+    };
+
+    scale.copy = function() {
+      return quantize()
+          .domain([x0, x1])
+          .range(range);
+    };
+
+    return linearish(scale);
+  }
+
+  function threshold() {
+    var domain = [0.5],
+        range = [0, 1],
+        n = 1;
+
+    function scale(x) {
+      if (x <= x) return range[d3Array.bisect(domain, x, 0, n)];
+    }
+
+    scale.domain = function(_) {
+      return arguments.length ? (domain = slice.call(_), n = Math.min(domain.length, range.length - 1), scale) : domain.slice();
+    };
+
+    scale.range = function(_) {
+      return arguments.length ? (range = slice.call(_), n = Math.min(domain.length, range.length - 1), scale) : range.slice();
+    };
+
+    scale.invertExtent = function(y) {
+      var i = range.indexOf(y);
+      return [domain[i - 1], domain[i]];
+    };
+
+    scale.copy = function() {
+      return threshold()
+          .domain(domain)
+          .range(range);
+    };
+
+    return scale;
+  }
+
+  var durationSecond = 1000;
+  var durationMinute = durationSecond * 60;
+  var durationHour = durationMinute * 60;
+  var durationDay = durationHour * 24;
+  var durationWeek = durationDay * 7;
+  var durationMonth = durationDay * 30;
+  var durationYear = durationDay * 365;
+  function date(t) {
+    return new Date(t);
+  }
+
+  function number$1(t) {
+    return t instanceof Date ? +t : +new Date(+t);
+  }
+
+  function calendar(year, month, week, day, hour, minute, second, millisecond, format) {
+    var scale = continuous(deinterpolate, d3Interpolate.interpolateNumber),
+        invert = scale.invert,
+        domain = scale.domain;
+
+    var formatMillisecond = format(".%L"),
+        formatSecond = format(":%S"),
+        formatMinute = format("%I:%M"),
+        formatHour = format("%I %p"),
+        formatDay = format("%a %d"),
+        formatWeek = format("%b %d"),
+        formatMonth = format("%B"),
+        formatYear = format("%Y");
+
+    var tickIntervals = [
+      [second,  1,      durationSecond],
+      [second,  5,  5 * durationSecond],
+      [second, 15, 15 * durationSecond],
+      [second, 30, 30 * durationSecond],
+      [minute,  1,      durationMinute],
+      [minute,  5,  5 * durationMinute],
+      [minute, 15, 15 * durationMinute],
+      [minute, 30, 30 * durationMinute],
+      [  hour,  1,      durationHour  ],
+      [  hour,  3,  3 * durationHour  ],
+      [  hour,  6,  6 * durationHour  ],
+      [  hour, 12, 12 * durationHour  ],
+      [   day,  1,      durationDay   ],
+      [   day,  2,  2 * durationDay   ],
+      [  week,  1,      durationWeek  ],
+      [ month,  1,      durationMonth ],
+      [ month,  3,  3 * durationMonth ],
+      [  year,  1,      durationYear  ]
+    ];
+
+    function tickFormat(date) {
+      return (second(date) < date ? formatMillisecond
+          : minute(date) < date ? formatSecond
+          : hour(date) < date ? formatMinute
+          : day(date) < date ? formatHour
+          : month(date) < date ? (week(date) < date ? formatDay : formatWeek)
+          : year(date) < date ? formatMonth
+          : formatYear)(date);
+    }
+
+    function tickInterval(interval, start, stop, step) {
+      if (interval == null) interval = 10;
+
+      // If a desired tick count is specified, pick a reasonable tick interval
+      // based on the extent of the domain and a rough estimate of tick size.
+      // Otherwise, assume interval is already a time interval and use it.
+      if (typeof interval === "number") {
+        var target = Math.abs(stop - start) / interval,
+            i = d3Array.bisector(function(i) { return i[2]; }).right(tickIntervals, target);
+        if (i === tickIntervals.length) {
+          step = d3Array.tickStep(start / durationYear, stop / durationYear, interval);
+          interval = year;
+        } else if (i) {
+          i = tickIntervals[target / tickIntervals[i - 1][2] < tickIntervals[i][2] / target ? i - 1 : i];
+          step = i[1];
+          interval = i[0];
+        } else {
+          step = d3Array.tickStep(start, stop, interval);
+          interval = millisecond;
+        }
+      }
+
+      return step == null ? interval : interval.every(step);
+    }
+
+    scale.invert = function(y) {
+      return new Date(invert(y));
+    };
+
+    scale.domain = function(_) {
+      return arguments.length ? domain(map$1.call(_, number$1)) : domain().map(date);
+    };
+
+    scale.ticks = function(interval, step) {
+      var d = domain(),
+          t0 = d[0],
+          t1 = d[d.length - 1],
+          r = t1 < t0,
+          t;
+      if (r) t = t0, t0 = t1, t1 = t;
+      t = tickInterval(interval, t0, t1, step);
+      t = t ? t.range(t0, t1 + 1) : []; // inclusive stop
+      return r ? t.reverse() : t;
+    };
+
+    scale.tickFormat = function(count, specifier) {
+      return specifier == null ? tickFormat : format(specifier);
+    };
+
+    scale.nice = function(interval, step) {
+      var d = domain();
+      return (interval = tickInterval(interval, d[0], d[d.length - 1], step))
+          ? domain(nice(d, interval))
+          : scale;
+    };
+
+    scale.copy = function() {
+      return copy(scale, calendar(year, month, week, day, hour, minute, second, millisecond, format));
+    };
+
+    return scale;
+  }
+
+  function time() {
+    return calendar(d3Time.timeYear, d3Time.timeMonth, d3Time.timeWeek, d3Time.timeDay, d3Time.timeHour, d3Time.timeMinute, d3Time.timeSecond, d3Time.timeMillisecond, d3TimeFormat.timeFormat).domain([new Date(2000, 0, 1), new Date(2000, 0, 2)]);
+  }
+
+  function utcTime() {
+    return calendar(d3Time.utcYear, d3Time.utcMonth, d3Time.utcWeek, d3Time.utcDay, d3Time.utcHour, d3Time.utcMinute, d3Time.utcSecond, d3Time.utcMillisecond, d3TimeFormat.utcFormat).domain([Date.UTC(2000, 0, 1), Date.UTC(2000, 0, 2)]);
+  }
+
+  function colors(s) {
+    return s.match(/.{6}/g).map(function(x) {
+      return "#" + x;
+    });
+  }
+
+  var category10 = colors("1f77b4ff7f0e2ca02cd627289467bd8c564be377c27f7f7fbcbd2217becf");
+
+  var category20b = colors("393b795254a36b6ecf9c9ede6379398ca252b5cf6bcedb9c8c6d31bd9e39e7ba52e7cb94843c39ad494ad6616be7969c7b4173a55194ce6dbdde9ed6");
+
+  var category20c = colors("3182bd6baed69ecae1c6dbefe6550dfd8d3cfdae6bfdd0a231a35474c476a1d99bc7e9c0756bb19e9ac8bcbddcdadaeb636363969696bdbdbdd9d9d9");
+
+  var category20 = colors("1f77b4aec7e8ff7f0effbb782ca02c98df8ad62728ff98969467bdc5b0d58c564bc49c94e377c2f7b6d27f7f7fc7c7c7bcbd22dbdb8d17becf9edae5");
+
+  var cubehelix$1 = d3Interpolate.interpolateCubehelixLong(d3Color.cubehelix(300, 0.5, 0.0), d3Color.cubehelix(-240, 0.5, 1.0));
+
+  var warm = d3Interpolate.interpolateCubehelixLong(d3Color.cubehelix(-100, 0.75, 0.35), d3Color.cubehelix(80, 1.50, 0.8));
+
+  var cool = d3Interpolate.interpolateCubehelixLong(d3Color.cubehelix(260, 0.75, 0.35), d3Color.cubehelix(80, 1.50, 0.8));
+
+  var rainbow = d3Color.cubehelix();
+
+  function rainbow$1(t) {
+    if (t < 0 || t > 1) t -= Math.floor(t);
+    var ts = Math.abs(t - 0.5);
+    rainbow.h = 360 * t - 100;
+    rainbow.s = 1.5 - 1.5 * ts;
+    rainbow.l = 0.8 - 0.9 * ts;
+    return rainbow + "";
+  }
+
+  function ramp(range) {
+    var n = range.length;
+    return function(t) {
+      return range[Math.max(0, Math.min(n - 1, Math.floor(t * n)))];
+    };
+  }
+
+  var viridis = ramp(colors("44015444025645045745055946075a46085c460a5d460b5e470d60470e6147106347116447136548146748166848176948186a481a6c481b6d481c6e481d6f481f70482071482173482374482475482576482677482878482979472a7a472c7a472d7b472e7c472f7d46307e46327e46337f463480453581453781453882443983443a83443b84433d84433e85423f854240864241864142874144874045884046883f47883f48893e49893e4a893e4c8a3d4d8a3d4e8a3c4f8a3c508b3b518b3b528b3a538b3a548c39558c39568c38588c38598c375a8c375b8d365c8d365d8d355e8d355f8d34608d34618d33628d33638d32648e32658e31668e31678e31688e30698e306a8e2f6b8e2f6c8e2e6d8e2e6e8e2e6f8e2d708e2d718e2c718e2c728e2c738e2b748e2b758e2a768e2a778e2a788e29798e297a8e297b8e287c8e287d8e277e8e277f8e27808e26818e26828e26828e25838e25848e25858e24868e24878e23888e23898e238a8d228b8d228c8d228d8d218e8d218f8d21908d21918c20928c20928c20938c1f948c1f958b1f968b1f978b1f988b1f998a1f9a8a1e9b8a1e9c891e9d891f9e891f9f881fa0881fa1881fa1871fa28720a38620a48621a58521a68522a78522a88423a98324aa8325ab8225ac8226ad8127ad8128ae8029af7f2ab07f2cb17e2db27d2eb37c2fb47c31b57b32b67a34b67935b77937b87838b9773aba763bbb753dbc743fbc7340bd7242be7144bf7046c06f48c16e4ac16d4cc26c4ec36b50c46a52c56954c56856c66758c7655ac8645cc8635ec96260ca6063cb5f65cb5e67cc5c69cd5b6ccd5a6ece5870cf5773d05675d05477d1537ad1517cd2507fd34e81d34d84d44b86d54989d5488bd6468ed64590d74393d74195d84098d83e9bd93c9dd93ba0da39a2da37a5db36a8db34aadc32addc30b0dd2fb2dd2db5de2bb8de29bade28bddf26c0df25c2df23c5e021c8e020cae11fcde11dd0e11cd2e21bd5e21ad8e219dae319dde318dfe318e2e418e5e419e7e419eae51aece51befe51cf1e51df4e61ef6e620f8e621fbe723fde725"));
+
+  var magma = ramp(colors("00000401000501010601010802010902020b02020d03030f03031204041405041606051806051a07061c08071e0907200a08220b09240c09260d0a290e0b2b100b2d110c2f120d31130d34140e36150e38160f3b180f3d19103f1a10421c10441d11471e114920114b21114e22115024125325125527125829115a2a115c2c115f2d11612f116331116533106734106936106b38106c390f6e3b0f703d0f713f0f72400f74420f75440f764510774710784910784a10794c117a4e117b4f127b51127c52137c54137d56147d57157e59157e5a167e5c167f5d177f5f187f601880621980641a80651a80671b80681c816a1c816b1d816d1d816e1e81701f81721f817320817521817621817822817922827b23827c23827e24828025828125818326818426818627818827818928818b29818c29818e2a81902a81912b81932b80942c80962c80982d80992d809b2e7f9c2e7f9e2f7fa02f7fa1307ea3307ea5317ea6317da8327daa337dab337cad347cae347bb0357bb2357bb3367ab5367ab73779b83779ba3878bc3978bd3977bf3a77c03a76c23b75c43c75c53c74c73d73c83e73ca3e72cc3f71cd4071cf4070d0416fd2426fd3436ed5446dd6456cd8456cd9466bdb476adc4869de4968df4a68e04c67e24d66e34e65e44f64e55064e75263e85362e95462ea5661eb5760ec5860ed5a5fee5b5eef5d5ef05f5ef1605df2625df2645cf3655cf4675cf4695cf56b5cf66c5cf66e5cf7705cf7725cf8745cf8765cf9785df9795df97b5dfa7d5efa7f5efa815ffb835ffb8560fb8761fc8961fc8a62fc8c63fc8e64fc9065fd9266fd9467fd9668fd9869fd9a6afd9b6bfe9d6cfe9f6dfea16efea36ffea571fea772fea973feaa74feac76feae77feb078feb27afeb47bfeb67cfeb77efeb97ffebb81febd82febf84fec185fec287fec488fec68afec88cfeca8dfecc8ffecd90fecf92fed194fed395fed597fed799fed89afdda9cfddc9efddea0fde0a1fde2a3fde3a5fde5a7fde7a9fde9aafdebacfcecaefceeb0fcf0b2fcf2b4fcf4b6fcf6b8fcf7b9fcf9bbfcfbbdfcfdbf"));
+
+  var inferno = ramp(colors("00000401000501010601010802010a02020c02020e03021004031204031405041706041907051b08051d09061f0a07220b07240c08260d08290e092b10092d110a30120a32140b34150b37160b39180c3c190c3e1b0c411c0c431e0c451f0c48210c4a230c4c240c4f260c51280b53290b552b0b572d0b592f0a5b310a5c320a5e340a5f3609613809623909633b09643d09653e0966400a67420a68440a68450a69470b6a490b6a4a0c6b4c0c6b4d0d6c4f0d6c510e6c520e6d540f6d550f6d57106e59106e5a116e5c126e5d126e5f136e61136e62146e64156e65156e67166e69166e6a176e6c186e6d186e6f196e71196e721a6e741a6e751b6e771c6d781c6d7a1d6d7c1d6d7d1e6d7f1e6c801f6c82206c84206b85216b87216b88226a8a226a8c23698d23698f24699025689225689326679526679727669827669a28659b29649d29649f2a63a02a63a22b62a32c61a52c60a62d60a82e5fa92e5eab2f5ead305dae305cb0315bb1325ab3325ab43359b63458b73557b93556ba3655bc3754bd3853bf3952c03a51c13a50c33b4fc43c4ec63d4dc73e4cc83f4bca404acb4149cc4248ce4347cf4446d04545d24644d34743d44842d54a41d74b3fd84c3ed94d3dda4e3cdb503bdd513ade5238df5337e05536e15635e25734e35933e45a31e55c30e65d2fe75e2ee8602de9612bea632aeb6429eb6628ec6726ed6925ee6a24ef6c23ef6e21f06f20f1711ff1731df2741cf3761bf37819f47918f57b17f57d15f67e14f68013f78212f78410f8850ff8870ef8890cf98b0bf98c0af98e09fa9008fa9207fa9407fb9606fb9706fb9906fb9b06fb9d07fc9f07fca108fca309fca50afca60cfca80dfcaa0ffcac11fcae12fcb014fcb216fcb418fbb61afbb81dfbba1ffbbc21fbbe23fac026fac228fac42afac62df9c72ff9c932f9cb35f8cd37f8cf3af7d13df7d340f6d543f6d746f5d949f5db4cf4dd4ff4df53f4e156f3e35af3e55df2e661f2e865f2ea69f1ec6df1ed71f1ef75f1f179f2f27df2f482f3f586f3f68af4f88ef5f992f6fa96f8fb9af9fc9dfafda1fcffa4"));
+
+  var plasma = ramp(colors("0d088710078813078916078a19068c1b068d1d068e20068f2206902406912605912805922a05932c05942e05952f059631059733059735049837049938049a3a049a3c049b3e049c3f049c41049d43039e44039e46039f48039f4903a04b03a14c02a14e02a25002a25102a35302a35502a45601a45801a45901a55b01a55c01a65e01a66001a66100a76300a76400a76600a76700a86900a86a00a86c00a86e00a86f00a87100a87201a87401a87501a87701a87801a87a02a87b02a87d03a87e03a88004a88104a78305a78405a78606a68707a68808a68a09a58b0aa58d0ba58e0ca48f0da4910ea3920fa39410a29511a19613a19814a099159f9a169f9c179e9d189d9e199da01a9ca11b9ba21d9aa31e9aa51f99a62098a72197a82296aa2395ab2494ac2694ad2793ae2892b02991b12a90b22b8fb32c8eb42e8db52f8cb6308bb7318ab83289ba3388bb3488bc3587bd3786be3885bf3984c03a83c13b82c23c81c33d80c43e7fc5407ec6417dc7427cc8437bc9447aca457acb4679cc4778cc4977cd4a76ce4b75cf4c74d04d73d14e72d24f71d35171d45270d5536fd5546ed6556dd7566cd8576bd9586ada5a6ada5b69db5c68dc5d67dd5e66de5f65de6164df6263e06363e16462e26561e26660e3685fe4695ee56a5de56b5de66c5ce76e5be76f5ae87059e97158e97257ea7457eb7556eb7655ec7754ed7953ed7a52ee7b51ef7c51ef7e50f07f4ff0804ef1814df1834cf2844bf3854bf3874af48849f48948f58b47f58c46f68d45f68f44f79044f79143f79342f89441f89540f9973ff9983ef99a3efa9b3dfa9c3cfa9e3bfb9f3afba139fba238fca338fca537fca636fca835fca934fdab33fdac33fdae32fdaf31fdb130fdb22ffdb42ffdb52efeb72dfeb82cfeba2cfebb2bfebd2afebe2afec029fdc229fdc328fdc527fdc627fdc827fdca26fdcb26fccd25fcce25fcd025fcd225fbd324fbd524fbd724fad824fada24f9dc24f9dd25f8df25f8e125f7e225f7e425f6e626f6e826f5e926f5eb27f4ed27f3ee27f3f027f2f227f1f426f1f525f0f724f0f921"));
+
+  function sequential(interpolator) {
+    var x0 = 0,
+        x1 = 1,
+        clamp = false;
+
+    function scale(x) {
+      var t = (x - x0) / (x1 - x0);
+      return interpolator(clamp ? Math.max(0, Math.min(1, t)) : t);
+    }
+
+    scale.domain = function(_) {
+      return arguments.length ? (x0 = +_[0], x1 = +_[1], scale) : [x0, x1];
+    };
+
+    scale.clamp = function(_) {
+      return arguments.length ? (clamp = !!_, scale) : clamp;
+    };
+
+    scale.interpolator = function(_) {
+      return arguments.length ? (interpolator = _, scale) : interpolator;
+    };
+
+    scale.copy = function() {
+      return sequential(interpolator).domain([x0, x1]).clamp(clamp);
+    };
+
+    return linearish(scale);
+  }
+
+  exports.scaleBand = band;
+  exports.scalePoint = point;
+  exports.scaleIdentity = identity;
+  exports.scaleLinear = linear;
+  exports.scaleLog = log;
+  exports.scaleOrdinal = ordinal;
+  exports.scaleImplicit = implicit;
+  exports.scalePow = pow;
+  exports.scaleSqrt = sqrt;
+  exports.scaleQuantile = quantile$1;
+  exports.scaleQuantize = quantize;
+  exports.scaleThreshold = threshold;
+  exports.scaleTime = time;
+  exports.scaleUtc = utcTime;
+  exports.schemeCategory10 = category10;
+  exports.schemeCategory20b = category20b;
+  exports.schemeCategory20c = category20c;
+  exports.schemeCategory20 = category20;
+  exports.interpolateCubehelixDefault = cubehelix$1;
+  exports.interpolateRainbow = rainbow$1;
+  exports.interpolateWarm = warm;
+  exports.interpolateCool = cool;
+  exports.interpolateViridis = viridis;
+  exports.interpolateMagma = magma;
+  exports.interpolateInferno = inferno;
+  exports.interpolatePlasma = plasma;
+  exports.scaleSequential = sequential;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
+
+}));
+},{"d3-array":31,"d3-collection":9,"d3-color":10,"d3-format":33,"d3-interpolate":21,"d3-time":37,"d3-time-format":36}],35:[function(require,module,exports){
+// https://d3js.org/d3-selection/ Version 1.0.2. Copyright 2016 Mike Bostock.
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (factory((global.d3 = global.d3 || {})));
+}(this, function (exports) { 'use strict';
+
+  var xhtml = "http://www.w3.org/1999/xhtml";
+
+  var namespaces = {
+    svg: "http://www.w3.org/2000/svg",
+    xhtml: xhtml,
+    xlink: "http://www.w3.org/1999/xlink",
+    xml: "http://www.w3.org/XML/1998/namespace",
+    xmlns: "http://www.w3.org/2000/xmlns/"
+  };
+
+  function namespace(name) {
+    var prefix = name += "", i = prefix.indexOf(":");
+    if (i >= 0 && (prefix = name.slice(0, i)) !== "xmlns") name = name.slice(i + 1);
+    return namespaces.hasOwnProperty(prefix) ? {space: namespaces[prefix], local: name} : name;
+  }
+
+  function creatorInherit(name) {
+    return function() {
+      var document = this.ownerDocument,
+          uri = this.namespaceURI;
+      return uri === xhtml && document.documentElement.namespaceURI === xhtml
+          ? document.createElement(name)
+          : document.createElementNS(uri, name);
+    };
+  }
+
+  function creatorFixed(fullname) {
+    return function() {
+      return this.ownerDocument.createElementNS(fullname.space, fullname.local);
+    };
+  }
+
+  function creator(name) {
+    var fullname = namespace(name);
+    return (fullname.local
+        ? creatorFixed
+        : creatorInherit)(fullname);
+  }
+
+  var nextId = 0;
+
+  function local() {
+    return new Local;
+  }
+
+  function Local() {
+    this._ = "@" + (++nextId).toString(36);
+  }
+
+  Local.prototype = local.prototype = {
+    constructor: Local,
+    get: function(node) {
+      var id = this._;
+      while (!(id in node)) if (!(node = node.parentNode)) return;
+      return node[id];
+    },
+    set: function(node, value) {
+      return node[this._] = value;
+    },
+    remove: function(node) {
+      return this._ in node && delete node[this._];
+    },
+    toString: function() {
+      return this._;
+    }
+  };
+
+  var matcher = function(selector) {
+    return function() {
+      return this.matches(selector);
+    };
+  };
+
+  if (typeof document !== "undefined") {
+    var element = document.documentElement;
+    if (!element.matches) {
+      var vendorMatches = element.webkitMatchesSelector
+          || element.msMatchesSelector
+          || element.mozMatchesSelector
+          || element.oMatchesSelector;
+      matcher = function(selector) {
+        return function() {
+          return vendorMatches.call(this, selector);
+        };
+      };
+    }
+  }
+
+  var matcher$1 = matcher;
+
+  var filterEvents = {};
+
+  exports.event = null;
+
+  if (typeof document !== "undefined") {
+    var element$1 = document.documentElement;
+    if (!("onmouseenter" in element$1)) {
+      filterEvents = {mouseenter: "mouseover", mouseleave: "mouseout"};
+    }
+  }
+
+  function filterContextListener(listener, index, group) {
+    listener = contextListener(listener, index, group);
+    return function(event) {
+      var related = event.relatedTarget;
+      if (!related || (related !== this && !(related.compareDocumentPosition(this) & 8))) {
+        listener.call(this, event);
+      }
+    };
+  }
+
+  function contextListener(listener, index, group) {
+    return function(event1) {
+      var event0 = exports.event; // Events can be reentrant (e.g., focus).
+      exports.event = event1;
+      try {
+        listener.call(this, this.__data__, index, group);
+      } finally {
+        exports.event = event0;
+      }
+    };
+  }
+
+  function parseTypenames(typenames) {
+    return typenames.trim().split(/^|\s+/).map(function(t) {
+      var name = "", i = t.indexOf(".");
+      if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
+      return {type: t, name: name};
+    });
+  }
+
+  function onRemove(typename) {
+    return function() {
+      var on = this.__on;
+      if (!on) return;
+      for (var j = 0, i = -1, m = on.length, o; j < m; ++j) {
+        if (o = on[j], (!typename.type || o.type === typename.type) && o.name === typename.name) {
+          this.removeEventListener(o.type, o.listener, o.capture);
+        } else {
+          on[++i] = o;
+        }
+      }
+      if (++i) on.length = i;
+      else delete this.__on;
+    };
+  }
+
+  function onAdd(typename, value, capture) {
+    var wrap = filterEvents.hasOwnProperty(typename.type) ? filterContextListener : contextListener;
+    return function(d, i, group) {
+      var on = this.__on, o, listener = wrap(value, i, group);
+      if (on) for (var j = 0, m = on.length; j < m; ++j) {
+        if ((o = on[j]).type === typename.type && o.name === typename.name) {
+          this.removeEventListener(o.type, o.listener, o.capture);
+          this.addEventListener(o.type, o.listener = listener, o.capture = capture);
+          o.value = value;
+          return;
+        }
+      }
+      this.addEventListener(typename.type, listener, capture);
+      o = {type: typename.type, name: typename.name, value: value, listener: listener, capture: capture};
+      if (!on) this.__on = [o];
+      else on.push(o);
+    };
+  }
+
+  function selection_on(typename, value, capture) {
+    var typenames = parseTypenames(typename + ""), i, n = typenames.length, t;
+
+    if (arguments.length < 2) {
+      var on = this.node().__on;
+      if (on) for (var j = 0, m = on.length, o; j < m; ++j) {
+        for (i = 0, o = on[j]; i < n; ++i) {
+          if ((t = typenames[i]).type === o.type && t.name === o.name) {
+            return o.value;
+          }
+        }
+      }
+      return;
+    }
+
+    on = value ? onAdd : onRemove;
+    if (capture == null) capture = false;
+    for (i = 0; i < n; ++i) this.each(on(typenames[i], value, capture));
+    return this;
+  }
+
+  function customEvent(event1, listener, that, args) {
+    var event0 = exports.event;
+    event1.sourceEvent = exports.event;
+    exports.event = event1;
+    try {
+      return listener.apply(that, args);
+    } finally {
+      exports.event = event0;
+    }
+  }
+
+  function sourceEvent() {
+    var current = exports.event, source;
+    while (source = current.sourceEvent) current = source;
+    return current;
+  }
+
+  function point(node, event) {
+    var svg = node.ownerSVGElement || node;
+
+    if (svg.createSVGPoint) {
+      var point = svg.createSVGPoint();
+      point.x = event.clientX, point.y = event.clientY;
+      point = point.matrixTransform(node.getScreenCTM().inverse());
+      return [point.x, point.y];
+    }
+
+    var rect = node.getBoundingClientRect();
+    return [event.clientX - rect.left - node.clientLeft, event.clientY - rect.top - node.clientTop];
+  }
+
+  function mouse(node) {
+    var event = sourceEvent();
+    if (event.changedTouches) event = event.changedTouches[0];
+    return point(node, event);
+  }
+
+  function none() {}
+
+  function selector(selector) {
+    return selector == null ? none : function() {
+      return this.querySelector(selector);
+    };
+  }
+
+  function selection_select(select) {
+    if (typeof select !== "function") select = selector(select);
+
+    for (var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j) {
+      for (var group = groups[j], n = group.length, subgroup = subgroups[j] = new Array(n), node, subnode, i = 0; i < n; ++i) {
+        if ((node = group[i]) && (subnode = select.call(node, node.__data__, i, group))) {
+          if ("__data__" in node) subnode.__data__ = node.__data__;
+          subgroup[i] = subnode;
+        }
+      }
+    }
+
+    return new Selection(subgroups, this._parents);
+  }
+
+  function empty() {
+    return [];
+  }
+
+  function selectorAll(selector) {
+    return selector == null ? empty : function() {
+      return this.querySelectorAll(selector);
+    };
+  }
+
+  function selection_selectAll(select) {
+    if (typeof select !== "function") select = selectorAll(select);
+
+    for (var groups = this._groups, m = groups.length, subgroups = [], parents = [], j = 0; j < m; ++j) {
+      for (var group = groups[j], n = group.length, node, i = 0; i < n; ++i) {
+        if (node = group[i]) {
+          subgroups.push(select.call(node, node.__data__, i, group));
+          parents.push(node);
+        }
+      }
+    }
+
+    return new Selection(subgroups, parents);
+  }
+
+  function selection_filter(match) {
+    if (typeof match !== "function") match = matcher$1(match);
+
+    for (var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j) {
+      for (var group = groups[j], n = group.length, subgroup = subgroups[j] = [], node, i = 0; i < n; ++i) {
+        if ((node = group[i]) && match.call(node, node.__data__, i, group)) {
+          subgroup.push(node);
+        }
+      }
+    }
+
+    return new Selection(subgroups, this._parents);
+  }
+
+  function sparse(update) {
+    return new Array(update.length);
+  }
+
+  function selection_enter() {
+    return new Selection(this._enter || this._groups.map(sparse), this._parents);
+  }
+
+  function EnterNode(parent, datum) {
+    this.ownerDocument = parent.ownerDocument;
+    this.namespaceURI = parent.namespaceURI;
+    this._next = null;
+    this._parent = parent;
+    this.__data__ = datum;
+  }
+
+  EnterNode.prototype = {
+    constructor: EnterNode,
+    appendChild: function(child) { return this._parent.insertBefore(child, this._next); },
+    insertBefore: function(child, next) { return this._parent.insertBefore(child, next); },
+    querySelector: function(selector) { return this._parent.querySelector(selector); },
+    querySelectorAll: function(selector) { return this._parent.querySelectorAll(selector); }
+  };
+
+  function constant(x) {
+    return function() {
+      return x;
+    };
+  }
+
+  var keyPrefix = "$"; // Protect against keys like “__proto__”.
+
+  function bindIndex(parent, group, enter, update, exit, data) {
+    var i = 0,
+        node,
+        groupLength = group.length,
+        dataLength = data.length;
+
+    // Put any non-null nodes that fit into update.
+    // Put any null nodes into enter.
+    // Put any remaining data into enter.
+    for (; i < dataLength; ++i) {
+      if (node = group[i]) {
+        node.__data__ = data[i];
+        update[i] = node;
+      } else {
+        enter[i] = new EnterNode(parent, data[i]);
+      }
+    }
+
+    // Put any non-null nodes that don’t fit into exit.
+    for (; i < groupLength; ++i) {
+      if (node = group[i]) {
+        exit[i] = node;
+      }
+    }
+  }
+
+  function bindKey(parent, group, enter, update, exit, data, key) {
+    var i,
+        node,
+        nodeByKeyValue = {},
+        groupLength = group.length,
+        dataLength = data.length,
+        keyValues = new Array(groupLength),
+        keyValue;
+
+    // Compute the key for each node.
+    // If multiple nodes have the same key, the duplicates are added to exit.
+    for (i = 0; i < groupLength; ++i) {
+      if (node = group[i]) {
+        keyValues[i] = keyValue = keyPrefix + key.call(node, node.__data__, i, group);
+        if (keyValue in nodeByKeyValue) {
+          exit[i] = node;
+        } else {
+          nodeByKeyValue[keyValue] = node;
+        }
+      }
+    }
+
+    // Compute the key for each datum.
+    // If there a node associated with this key, join and add it to update.
+    // If there is not (or the key is a duplicate), add it to enter.
+    for (i = 0; i < dataLength; ++i) {
+      keyValue = keyPrefix + key.call(parent, data[i], i, data);
+      if (node = nodeByKeyValue[keyValue]) {
+        update[i] = node;
+        node.__data__ = data[i];
+        nodeByKeyValue[keyValue] = null;
+      } else {
+        enter[i] = new EnterNode(parent, data[i]);
+      }
+    }
+
+    // Add any remaining nodes that were not bound to data to exit.
+    for (i = 0; i < groupLength; ++i) {
+      if ((node = group[i]) && (nodeByKeyValue[keyValues[i]] === node)) {
+        exit[i] = node;
+      }
+    }
+  }
+
+  function selection_data(value, key) {
+    if (!value) {
+      data = new Array(this.size()), j = -1;
+      this.each(function(d) { data[++j] = d; });
+      return data;
+    }
+
+    var bind = key ? bindKey : bindIndex,
+        parents = this._parents,
+        groups = this._groups;
+
+    if (typeof value !== "function") value = constant(value);
+
+    for (var m = groups.length, update = new Array(m), enter = new Array(m), exit = new Array(m), j = 0; j < m; ++j) {
+      var parent = parents[j],
+          group = groups[j],
+          groupLength = group.length,
+          data = value.call(parent, parent && parent.__data__, j, parents),
+          dataLength = data.length,
+          enterGroup = enter[j] = new Array(dataLength),
+          updateGroup = update[j] = new Array(dataLength),
+          exitGroup = exit[j] = new Array(groupLength);
+
+      bind(parent, group, enterGroup, updateGroup, exitGroup, data, key);
+
+      // Now connect the enter nodes to their following update node, such that
+      // appendChild can insert the materialized enter node before this node,
+      // rather than at the end of the parent node.
+      for (var i0 = 0, i1 = 0, previous, next; i0 < dataLength; ++i0) {
+        if (previous = enterGroup[i0]) {
+          if (i0 >= i1) i1 = i0 + 1;
+          while (!(next = updateGroup[i1]) && ++i1 < dataLength);
+          previous._next = next || null;
+        }
+      }
+    }
+
+    update = new Selection(update, parents);
+    update._enter = enter;
+    update._exit = exit;
+    return update;
+  }
+
+  function selection_exit() {
+    return new Selection(this._exit || this._groups.map(sparse), this._parents);
+  }
+
+  function selection_merge(selection) {
+
+    for (var groups0 = this._groups, groups1 = selection._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j) {
+      for (var group0 = groups0[j], group1 = groups1[j], n = group0.length, merge = merges[j] = new Array(n), node, i = 0; i < n; ++i) {
+        if (node = group0[i] || group1[i]) {
+          merge[i] = node;
+        }
+      }
+    }
+
+    for (; j < m0; ++j) {
+      merges[j] = groups0[j];
+    }
+
+    return new Selection(merges, this._parents);
+  }
+
+  function selection_order() {
+
+    for (var groups = this._groups, j = -1, m = groups.length; ++j < m;) {
+      for (var group = groups[j], i = group.length - 1, next = group[i], node; --i >= 0;) {
+        if (node = group[i]) {
+          if (next && next !== node.nextSibling) next.parentNode.insertBefore(node, next);
+          next = node;
+        }
+      }
+    }
+
+    return this;
+  }
+
+  function selection_sort(compare) {
+    if (!compare) compare = ascending;
+
+    function compareNode(a, b) {
+      return a && b ? compare(a.__data__, b.__data__) : !a - !b;
+    }
+
+    for (var groups = this._groups, m = groups.length, sortgroups = new Array(m), j = 0; j < m; ++j) {
+      for (var group = groups[j], n = group.length, sortgroup = sortgroups[j] = new Array(n), node, i = 0; i < n; ++i) {
+        if (node = group[i]) {
+          sortgroup[i] = node;
+        }
+      }
+      sortgroup.sort(compareNode);
+    }
+
+    return new Selection(sortgroups, this._parents).order();
+  }
+
+  function ascending(a, b) {
+    return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
+  }
+
+  function selection_call() {
+    var callback = arguments[0];
+    arguments[0] = this;
+    callback.apply(null, arguments);
+    return this;
+  }
+
+  function selection_nodes() {
+    var nodes = new Array(this.size()), i = -1;
+    this.each(function() { nodes[++i] = this; });
+    return nodes;
+  }
+
+  function selection_node() {
+
+    for (var groups = this._groups, j = 0, m = groups.length; j < m; ++j) {
+      for (var group = groups[j], i = 0, n = group.length; i < n; ++i) {
+        var node = group[i];
+        if (node) return node;
+      }
+    }
+
+    return null;
+  }
+
+  function selection_size() {
+    var size = 0;
+    this.each(function() { ++size; });
+    return size;
+  }
+
+  function selection_empty() {
+    return !this.node();
+  }
+
+  function selection_each(callback) {
+
+    for (var groups = this._groups, j = 0, m = groups.length; j < m; ++j) {
+      for (var group = groups[j], i = 0, n = group.length, node; i < n; ++i) {
+        if (node = group[i]) callback.call(node, node.__data__, i, group);
+      }
+    }
+
+    return this;
+  }
+
+  function attrRemove(name) {
+    return function() {
+      this.removeAttribute(name);
+    };
+  }
+
+  function attrRemoveNS(fullname) {
+    return function() {
+      this.removeAttributeNS(fullname.space, fullname.local);
+    };
+  }
+
+  function attrConstant(name, value) {
+    return function() {
+      this.setAttribute(name, value);
+    };
+  }
+
+  function attrConstantNS(fullname, value) {
+    return function() {
+      this.setAttributeNS(fullname.space, fullname.local, value);
+    };
+  }
+
+  function attrFunction(name, value) {
+    return function() {
+      var v = value.apply(this, arguments);
+      if (v == null) this.removeAttribute(name);
+      else this.setAttribute(name, v);
+    };
+  }
+
+  function attrFunctionNS(fullname, value) {
+    return function() {
+      var v = value.apply(this, arguments);
+      if (v == null) this.removeAttributeNS(fullname.space, fullname.local);
+      else this.setAttributeNS(fullname.space, fullname.local, v);
+    };
+  }
+
+  function selection_attr(name, value) {
+    var fullname = namespace(name);
+
+    if (arguments.length < 2) {
+      var node = this.node();
+      return fullname.local
+          ? node.getAttributeNS(fullname.space, fullname.local)
+          : node.getAttribute(fullname);
+    }
+
+    return this.each((value == null
+        ? (fullname.local ? attrRemoveNS : attrRemove) : (typeof value === "function"
+        ? (fullname.local ? attrFunctionNS : attrFunction)
+        : (fullname.local ? attrConstantNS : attrConstant)))(fullname, value));
+  }
+
+  function defaultView(node) {
+    return (node.ownerDocument && node.ownerDocument.defaultView) // node is a Node
+        || (node.document && node) // node is a Window
+        || node.defaultView; // node is a Document
+  }
+
+  function styleRemove(name) {
+    return function() {
+      this.style.removeProperty(name);
+    };
+  }
+
+  function styleConstant(name, value, priority) {
+    return function() {
+      this.style.setProperty(name, value, priority);
+    };
+  }
+
+  function styleFunction(name, value, priority) {
+    return function() {
+      var v = value.apply(this, arguments);
+      if (v == null) this.style.removeProperty(name);
+      else this.style.setProperty(name, v, priority);
+    };
+  }
+
+  function selection_style(name, value, priority) {
+    var node;
+    return arguments.length > 1
+        ? this.each((value == null
+              ? styleRemove : typeof value === "function"
+              ? styleFunction
+              : styleConstant)(name, value, priority == null ? "" : priority))
+        : defaultView(node = this.node())
+            .getComputedStyle(node, null)
+            .getPropertyValue(name);
+  }
+
+  function propertyRemove(name) {
+    return function() {
+      delete this[name];
+    };
+  }
+
+  function propertyConstant(name, value) {
+    return function() {
+      this[name] = value;
+    };
+  }
+
+  function propertyFunction(name, value) {
+    return function() {
+      var v = value.apply(this, arguments);
+      if (v == null) delete this[name];
+      else this[name] = v;
+    };
+  }
+
+  function selection_property(name, value) {
+    return arguments.length > 1
+        ? this.each((value == null
+            ? propertyRemove : typeof value === "function"
+            ? propertyFunction
+            : propertyConstant)(name, value))
+        : this.node()[name];
+  }
+
+  function classArray(string) {
+    return string.trim().split(/^|\s+/);
+  }
+
+  function classList(node) {
+    return node.classList || new ClassList(node);
+  }
+
+  function ClassList(node) {
+    this._node = node;
+    this._names = classArray(node.getAttribute("class") || "");
+  }
+
+  ClassList.prototype = {
+    add: function(name) {
+      var i = this._names.indexOf(name);
+      if (i < 0) {
+        this._names.push(name);
+        this._node.setAttribute("class", this._names.join(" "));
+      }
+    },
+    remove: function(name) {
+      var i = this._names.indexOf(name);
+      if (i >= 0) {
+        this._names.splice(i, 1);
+        this._node.setAttribute("class", this._names.join(" "));
+      }
+    },
+    contains: function(name) {
+      return this._names.indexOf(name) >= 0;
+    }
+  };
+
+  function classedAdd(node, names) {
+    var list = classList(node), i = -1, n = names.length;
+    while (++i < n) list.add(names[i]);
+  }
+
+  function classedRemove(node, names) {
+    var list = classList(node), i = -1, n = names.length;
+    while (++i < n) list.remove(names[i]);
+  }
+
+  function classedTrue(names) {
+    return function() {
+      classedAdd(this, names);
+    };
+  }
+
+  function classedFalse(names) {
+    return function() {
+      classedRemove(this, names);
+    };
+  }
+
+  function classedFunction(names, value) {
+    return function() {
+      (value.apply(this, arguments) ? classedAdd : classedRemove)(this, names);
+    };
+  }
+
+  function selection_classed(name, value) {
+    var names = classArray(name + "");
+
+    if (arguments.length < 2) {
+      var list = classList(this.node()), i = -1, n = names.length;
+      while (++i < n) if (!list.contains(names[i])) return false;
+      return true;
+    }
+
+    return this.each((typeof value === "function"
+        ? classedFunction : value
+        ? classedTrue
+        : classedFalse)(names, value));
+  }
+
+  function textRemove() {
+    this.textContent = "";
+  }
+
+  function textConstant(value) {
+    return function() {
+      this.textContent = value;
+    };
+  }
+
+  function textFunction(value) {
+    return function() {
+      var v = value.apply(this, arguments);
+      this.textContent = v == null ? "" : v;
+    };
+  }
+
+  function selection_text(value) {
+    return arguments.length
+        ? this.each(value == null
+            ? textRemove : (typeof value === "function"
+            ? textFunction
+            : textConstant)(value))
+        : this.node().textContent;
+  }
+
+  function htmlRemove() {
+    this.innerHTML = "";
+  }
+
+  function htmlConstant(value) {
+    return function() {
+      this.innerHTML = value;
+    };
+  }
+
+  function htmlFunction(value) {
+    return function() {
+      var v = value.apply(this, arguments);
+      this.innerHTML = v == null ? "" : v;
+    };
+  }
+
+  function selection_html(value) {
+    return arguments.length
+        ? this.each(value == null
+            ? htmlRemove : (typeof value === "function"
+            ? htmlFunction
+            : htmlConstant)(value))
+        : this.node().innerHTML;
+  }
+
+  function raise() {
+    if (this.nextSibling) this.parentNode.appendChild(this);
+  }
+
+  function selection_raise() {
+    return this.each(raise);
+  }
+
+  function lower() {
+    if (this.previousSibling) this.parentNode.insertBefore(this, this.parentNode.firstChild);
+  }
+
+  function selection_lower() {
+    return this.each(lower);
+  }
+
+  function selection_append(name) {
+    var create = typeof name === "function" ? name : creator(name);
+    return this.select(function() {
+      return this.appendChild(create.apply(this, arguments));
+    });
+  }
+
+  function constantNull() {
+    return null;
+  }
+
+  function selection_insert(name, before) {
+    var create = typeof name === "function" ? name : creator(name),
+        select = before == null ? constantNull : typeof before === "function" ? before : selector(before);
+    return this.select(function() {
+      return this.insertBefore(create.apply(this, arguments), select.apply(this, arguments) || null);
+    });
+  }
+
+  function remove() {
+    var parent = this.parentNode;
+    if (parent) parent.removeChild(this);
+  }
+
+  function selection_remove() {
+    return this.each(remove);
+  }
+
+  function selection_datum(value) {
+    return arguments.length
+        ? this.property("__data__", value)
+        : this.node().__data__;
+  }
+
+  function dispatchEvent(node, type, params) {
+    var window = defaultView(node),
+        event = window.CustomEvent;
+
+    if (event) {
+      event = new event(type, params);
+    } else {
+      event = window.document.createEvent("Event");
+      if (params) event.initEvent(type, params.bubbles, params.cancelable), event.detail = params.detail;
+      else event.initEvent(type, false, false);
+    }
+
+    node.dispatchEvent(event);
+  }
+
+  function dispatchConstant(type, params) {
+    return function() {
+      return dispatchEvent(this, type, params);
+    };
+  }
+
+  function dispatchFunction(type, params) {
+    return function() {
+      return dispatchEvent(this, type, params.apply(this, arguments));
+    };
+  }
+
+  function selection_dispatch(type, params) {
+    return this.each((typeof params === "function"
+        ? dispatchFunction
+        : dispatchConstant)(type, params));
+  }
+
+  var root = [null];
+
+  function Selection(groups, parents) {
+    this._groups = groups;
+    this._parents = parents;
+  }
+
+  function selection() {
+    return new Selection([[document.documentElement]], root);
+  }
+
+  Selection.prototype = selection.prototype = {
+    constructor: Selection,
+    select: selection_select,
+    selectAll: selection_selectAll,
+    filter: selection_filter,
+    data: selection_data,
+    enter: selection_enter,
+    exit: selection_exit,
+    merge: selection_merge,
+    order: selection_order,
+    sort: selection_sort,
+    call: selection_call,
+    nodes: selection_nodes,
+    node: selection_node,
+    size: selection_size,
+    empty: selection_empty,
+    each: selection_each,
+    attr: selection_attr,
+    style: selection_style,
+    property: selection_property,
+    classed: selection_classed,
+    text: selection_text,
+    html: selection_html,
+    raise: selection_raise,
+    lower: selection_lower,
+    append: selection_append,
+    insert: selection_insert,
+    remove: selection_remove,
+    datum: selection_datum,
+    on: selection_on,
+    dispatch: selection_dispatch
+  };
+
+  function select(selector) {
+    return typeof selector === "string"
+        ? new Selection([[document.querySelector(selector)]], [document.documentElement])
+        : new Selection([[selector]], root);
+  }
+
+  function selectAll(selector) {
+    return typeof selector === "string"
+        ? new Selection([document.querySelectorAll(selector)], [document.documentElement])
+        : new Selection([selector == null ? [] : selector], root);
+  }
+
+  function touch(node, touches, identifier) {
+    if (arguments.length < 3) identifier = touches, touches = sourceEvent().changedTouches;
+
+    for (var i = 0, n = touches ? touches.length : 0, touch; i < n; ++i) {
+      if ((touch = touches[i]).identifier === identifier) {
+        return point(node, touch);
+      }
+    }
+
+    return null;
+  }
+
+  function touches(node, touches) {
+    if (touches == null) touches = sourceEvent().touches;
+
+    for (var i = 0, n = touches ? touches.length : 0, points = new Array(n); i < n; ++i) {
+      points[i] = point(node, touches[i]);
+    }
+
+    return points;
+  }
+
+  exports.creator = creator;
+  exports.local = local;
+  exports.matcher = matcher$1;
+  exports.mouse = mouse;
+  exports.namespace = namespace;
+  exports.namespaces = namespaces;
+  exports.select = select;
+  exports.selectAll = selectAll;
+  exports.selection = selection;
+  exports.selector = selector;
+  exports.selectorAll = selectorAll;
+  exports.touch = touch;
+  exports.touches = touches;
+  exports.window = defaultView;
+  exports.customEvent = customEvent;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
+
+}));
+},{}],36:[function(require,module,exports){
 // https://d3js.org/d3-time-format/ v2.2.3 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-time')) :
@@ -17352,7 +21111,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-time":30}],30:[function(require,module,exports){
+},{"d3-time":37}],37:[function(require,module,exports){
 // https://d3js.org/d3-time/ v1.1.0 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -17727,7 +21486,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],31:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 // https://d3js.org/d3-timer/ v1.0.10 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -17878,7 +21637,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],32:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 // https://d3js.org/d3-transition/ v1.3.2 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-selection'), require('d3-dispatch'), require('d3-timer'), require('d3-interpolate'), require('d3-color'), require('d3-ease')) :
@@ -18760,7 +22519,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-color":9,"d3-dispatch":11,"d3-ease":14,"d3-interpolate":20,"d3-selection":27,"d3-timer":31}],33:[function(require,module,exports){
+},{"d3-color":10,"d3-dispatch":12,"d3-ease":15,"d3-interpolate":21,"d3-selection":28,"d3-timer":38}],40:[function(require,module,exports){
 // https://d3js.org/d3-voronoi/ v1.1.4 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -19761,7 +23520,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],34:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 // https://d3js.org/d3-zoom/ v1.8.3 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dispatch'), require('d3-drag'), require('d3-interpolate'), require('d3-selection'), require('d3-transition')) :
@@ -20260,7 +24019,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-dispatch":11,"d3-drag":12,"d3-interpolate":20,"d3-selection":27,"d3-transition":32}],35:[function(require,module,exports){
+},{"d3-dispatch":12,"d3-drag":13,"d3-interpolate":21,"d3-selection":28,"d3-transition":39}],42:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -20549,360 +24308,4 @@ Object.keys(d3Zoom).forEach(function (k) {
 });
 exports.version = version;
 
-},{"d3-array":3,"d3-axis":4,"d3-brush":5,"d3-chord":6,"d3-collection":8,"d3-color":9,"d3-contour":10,"d3-dispatch":11,"d3-drag":12,"d3-dsv":13,"d3-ease":14,"d3-fetch":15,"d3-force":16,"d3-format":17,"d3-geo":18,"d3-hierarchy":19,"d3-interpolate":20,"d3-path":21,"d3-polygon":22,"d3-quadtree":23,"d3-random":24,"d3-scale":26,"d3-scale-chromatic":25,"d3-selection":27,"d3-shape":28,"d3-time":30,"d3-time-format":29,"d3-timer":31,"d3-transition":32,"d3-voronoi":33,"d3-zoom":34}],36:[function(require,module,exports){
-// MS BGD 2019-2020 - HIROTO YAMAKAWA 
-var d3 = require("d3")
-
-var x, 
-    y, 
-    yAxis,
-    xAxis,
-    xaxislabel, 
-    yaxislabel, 
-    svg,
-    i,
-    topData, 
-    mouseover, 
-    mouseout
-
-var format = d3.format(',')
-
-function top10(data){
-
-  // set the and margins of the graph
-  var margin = {top: 10, right: 30, bottom: 40, left: 100},
-      width = 1000 - margin.left - margin.right,
-      height = 500 - margin.top - margin.bottom;
-
-  // append the svg object to the body of the page
-  svg = d3.select("#top10")
-      .append("svg")
-      .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom)
-      .append("g")
-      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-  ////////////////////////////////////////////////////////////////////////////////////////////////
-
-  // create variables
-  x = d3.scaleLinear()
-  .range([ 0, width]);
-
-  y = d3.scaleBand()
-  .range([ 0, height ])
-  .padding(1);
-
-  // create labels
-  yaxislabel =svg.append("text")
-  .attr("text-anchor", "end")
-  .attr("transform", "rotate(0)")
-  .attr("y", 0)
-  .attr("x", -15);        
-
-  xaxislabel = svg.append("text")
-  .attr("text-anchor", "end")
-  .attr("x", width)
-  .attr("y", height + margin.top + 20);
-      
-  // create axis
-  xAxis = svg.append("g")
-  .call(d3.axisLeft(x))
-  .attr("transform", "translate(0," + height + ")");
-
-  yAxis = svg.append("g")
-  .call(d3.axisLeft(y));
-
-  // set i to "revenue" (default choice)
-  i = "revenue"
-
-  // create mouseover and mouseout functions
-  mouseover = function(d){
-    tooltip.transition()    
-    .duration(200)    
-    .style("opacity", 1);
-
-    tooltip .html("name: " + d.name + "<br/>" + i + " : " + format(d[i]) + "<br/>" + "genre : "+ d.genre)
-    .style("left", (d3.event.pageX + 10) + "px")
-    .style("top", (d3.event.pageY - 15) + "px")
-
-    }
-
-  mouseout = function(d){
-    tooltip.transition()    
-    .duration(200)    
-    .style("opacity", 0)
-  }
-
-  // create tooltips
-  var tooltip = d3.select("body")
-      .append("div")  
-      .attr("class", "tooltip")
-      .style('position','absolute')
-      .style("opacity", 0)
-      .style("background-color", "lightsteelblue")
-      .style("border", "solid")
-      .style("border-width", "1px")
-      .style("border-radius", "5px")
-      .style("padding", "10px");
-    
-
-  ////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-   //./data/tmdb-movie-metadata/tmdb_5000_movies.csv
-    //initiate graph
-  initialGraph(data);
-
-    //update graph based on selection from HTML dragdown
-  d3.select("#label-option").on("change", () => change(data));
-
-  topData = data.slice(0, 20)
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
-  // create function initialGraph
-  function initialGraph(data){
-
-    var selectValue = d3.select('select').property('value')
-
-    // select topData based on i
-    var topData = data.sort(function(a, b) {
-      return d3.descending(+a[i], +b[i]);
-      }).slice(0, 21);
-
-    // rescale the domain
-    x.domain([0, d3.max(topData, function(d) { return d[i] ;} )]);
-    y.domain(topData.map(function(d) { return d.name; }));
-
-    
-    //initiate X axis
-    xAxis
-    .call(d3.axisBottom(x))
-    .selectAll("text")
-    .attr("transform", "translate(-10,0)rotate(-20)")
-    .style("text-anchor", "end");
-
-    //initiate Y axis
-    yAxis
-    .call(d3.axisLeft(y));
-
-
-    //initiate X axis label
-    xaxislabel.text(i);
-
-    //initiate Y axis label
-    yaxislabel.text("movies");
-
-    //initiate bars, all starting at 0 at the beginning
-    svg.selectAll(".bar")
-    .data(topData)
-    .enter()
-    .append("rect")
-    .attr("class", "bar")
-    .attr("x",  function(d) {return  x(0);})
-    .attr("y", function(d) { return y(d.name); })
-    .attr("width",function(d){return x(0);} )
-    .attr("height", 15)
-    .on("mouseover", mouseover)
-    .on("mouseout", mouseout);
-
-
-    //update the bar with the transition
-    svg.selectAll(".bar")
-    .transition()
-    .duration(500)
-    .attr("width",function(d) { return  x(d[i]);}  )
-    .attr("y", function(d) { return y(d.name); })
-    .attr("height", 15)
-    .attr("fill", function(d) {
-      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});;
-
-    // add label next to bar
-    svg.append("g")
-      .attr("fill", "white")
-      .attr("text-anchor", "end")
-      .style("font", "12px sans-serif")
-    .selectAll("label-top10")
-    .data(topData)
-    .enter().append("text")
-    .attr("class", "label-top10")
-    .attr("x", d => x(d[i]) - 4)
-    .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
-    .text(d => format(d[i]));
-
-  };
-  ////////////////////////////////////////////////////////////////////////////////////////////////
-}
-
-//create update function 
-
-function change(data) {
-
-  var selectValue = d3.select('select').property('value');
-  i = selectValue
-  //update topData
-
-  var remake
-
-  if (topData.length < 20){
-    remake = true
-  }else{
-    remake = false
-  }
-
-  topData = data.sort(function(a, b) {
-    return d3.descending(+a[selectValue], +b[selectValue]);
-  }).slice(0, 20);
-
-
-  // update x and y domain / scale       
-  x
-  .domain([0, d3.max(topData, function(d) { return d[selectValue] ;} )])
-  .call(d3.axisBottom(x));
-    
-  y
-  .domain(topData.map(function(d) { return d.name; }))
-  .call(d3.axisLeft(y));
-    
-
-  // Update x axis label   (y axis remains unchanged)
-  xaxislabel
-  .attr("text-anchor", "end")
-  .text(selectValue);
-  
-  
-  // Update the Y-axis and X-axis
-  yAxis
-  .transition()
-  .duration(1500)
-  .call(d3.axisLeft(y));
-  
-  xAxis
-  .transition()
-  .duration(1500)
-  .call(d3.axisBottom(x))
-  .selectAll("text")
-  .attr("transform", "translate(-10,0)rotate(-20)")
-  .style("text-anchor", "end");
-
-  
-  console.log(d3.event, d3.event.target == d3.select('#label-option')._groups[0][0], d3.select('#label-option')._groups[0][0])
-
-  var event_is_select = d3.event.target == d3.select('#label-option')._groups[0][0]
-
-  if (remake & event_is_select == false){
-    var bar = svg.selectAll('.bar')
-    bar.remove()
-
-    svg.selectAll(".bar")
-        .data(topData)
-        .enter()
-        .append("rect")
-        .attr("class", "bar")
-        .attr("x",  function(d) {return  x(0);})
-        .attr("y", function(d) { return y(d.name); })
-        .attr("width",function(d){return x(0);} )
-        .attr("height", 15)
-        .on("mouseover", mouseover)
-        .on("mouseout", mouseout);
-
-    svg.selectAll(".bar")
-      .transition()
-      .duration(500)
-      .attr("width",function(d) { return  x(d[i]);}  )
-      .attr("y", function(d) { return y(d.name); })
-      .attr("height", 15)
-      .attr("fill", function(d) {
-      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});
-
-  }else{
-    var bar = svg.selectAll('.bar').data(topData);
-    bar.exit().remove(); 
-    // Update data:
-    bar
-    .transition()
-    .duration(500)
-    .attr("x",  function(d) {return  x(0);})
-    .attr("y", function(d) { return y(d.name); })
-    .attr("width",function(d){return x(0);} )
-    .attr("width",function(d) { return  x(d[selectValue]);}  )
-    .attr("height", 15)
-    .attr("fill", function(d) {
-      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});
-  }
-
-  // add label next to bar
-
-  var textlabel = svg.selectAll(".label-top10").data(topData)
-  textlabel.exit().remove()
-
-  textlabel.transition().duration(300)
-    .attr("x", d => x(d[i]) - 4)
-    .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
-    .text(d => format(d[i]));
-
-}
-
-module.exports.top10 = top10; 
-module.exports.change = change; 
-
-// export default {top10, change};
-  
-
-  
-       
-
-},{"d3":35}],37:[function(require,module,exports){
-var words = [];
-var layout;
-var wordsMap = {};
-
-var d3 = require("d3"),
-    cloud = require("d3-cloud");
-
-function wordcloud(){
-  d3.csv("data/words.csv").then(function(raw_data){
-  raw_data.map(function(d){
-      if (wordsMap.hasOwnProperty(d.words)) {
-        wordsMap[d.words]++;
-      } else {
-        wordsMap[d.words] = 1;
-      }
-  })
-  for (const [key, value] of Object.entries(wordsMap)) {
-    words.push({text: key, size: 10 + wordsMap[key] * 5})
-  }
-  layout = cloud()
-    .size([700, 400])
-    .words(words)
-    .padding(5)
-    .rotate(function() { return ~~(Math.random() * 2) * 45; })
-    .font("Impact")
-    .fontSize(function(d) { return d.size; })
-    .on("end", draw);
-
-  layout.start();
-})
-
-function draw(words) {
-  d3.select("#wordcloud").append("svg")
-      .attr("width", layout.size()[0])
-      .attr("height", layout.size()[1])
-    .append("g")
-      .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
-    .selectAll("text")
-      .data(words)
-    .enter().append("text")
-      .style("font-size", function(d) { return d.size + "px"; })
-      .style("font-family", "Impact")
-      .attr("text-anchor", "middle")
-      .attr("transform", function(d) {
-        return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
-      })
-      .text(function(d) { return d.text; });
-  }
-}
-
-module.exports.wordcloud = wordcloud;
-
-},{"d3":35,"d3-cloud":7}]},{},[2]);
+},{"d3-array":5,"d3-axis":6,"d3-brush":7,"d3-chord":8,"d3-collection":9,"d3-color":10,"d3-contour":11,"d3-dispatch":12,"d3-drag":13,"d3-dsv":14,"d3-ease":15,"d3-fetch":16,"d3-force":17,"d3-format":18,"d3-geo":19,"d3-hierarchy":20,"d3-interpolate":21,"d3-path":22,"d3-polygon":23,"d3-quadtree":24,"d3-random":25,"d3-scale":27,"d3-scale-chromatic":26,"d3-selection":28,"d3-shape":29,"d3-time":37,"d3-time-format":36,"d3-timer":38,"d3-transition":39,"d3-voronoi":40,"d3-zoom":41}]},{},[2]);
