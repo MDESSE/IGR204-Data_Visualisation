@@ -5,6 +5,7 @@
 //import top10 from "./top10_movies.js";
 
 var top10 = require("./top10_movies.js");
+var wordcloud = require("./wordcloud.js");
 
 var d3 = require("d3")
 
@@ -496,6 +497,7 @@ function filterdata(data){
         brush()
       }  
       top10.change(selected)
+      wordcloud.change(selected)
   }
 
   // render a set of polylines on a canvas
