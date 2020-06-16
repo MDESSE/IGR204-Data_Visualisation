@@ -421,6 +421,7 @@ function filterdata(data){
       ;
    
     // bold dimensions with label
+
     d3.selectAll('.label')
       .style("font-weight", function(dimension) {
           if (extents[dimensions.indexOf(dimension)][0] !== 0) return "bold";
