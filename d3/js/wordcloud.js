@@ -18,7 +18,7 @@ function wordcloud(){
     words.push({text: key, size: 10 + wordsMap[key] * 5})
   }
   layout = cloud()
-    .size([1200, 600])
+    .size([700, 400])
     .words(words)
     .padding(5)
     .rotate(function() { return ~~(Math.random() * 2) * 45; })
@@ -30,7 +30,7 @@ function wordcloud(){
 })
 
 function draw(words) {
-  d3.select("#axel_dataviz").append("svg")
+  d3.select("#wordcloud").append("svg")
       .attr("width", layout.size()[0])
       .attr("height", layout.size()[1])
     .append("g")

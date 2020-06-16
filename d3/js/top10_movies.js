@@ -1,5 +1,5 @@
 // MS BGD 2019-2020 - HIROTO YAMAKAWA 
-  
+var d3 = require("d3")
 
 var x, 
     y, 
@@ -22,7 +22,7 @@ function top10(data){
       height = 500 - margin.top - margin.bottom;
 
   // append the svg object to the body of the page
-  svg = d3.select("#hiro_dataviz")
+  svg = d3.select("#top10")
       .append("svg")
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom)
@@ -160,7 +160,22 @@ function top10(data){
     .duration(500)
     .attr("width",function(d) { return  x(d[i]);}  )
     .attr("y", function(d) { return y(d.name); })
-    .attr("height", 15);
+    .attr("height", 15)
+    .attr("fill", function(d) {
+      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});;
+
+    // add label next to bar
+    svg.append("g")
+      .attr("fill", "white")
+      .attr("text-anchor", "end")
+      .style("font", "12px sans-serif")
+    .selectAll("label")
+    .data(topData)
+    .enter().append("text")
+    .attr("class", "label")
+    .attr("x", d => x(d[i]) - 4)
+    .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
+    .text(d => format(d[i]));
 
   };
   ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -243,7 +258,22 @@ function change(data) {
       .duration(500)
       .attr("width",function(d) { return  x(d[i]);}  )
       .attr("y", function(d) { return y(d.name); })
-      .attr("height", 15);
+      .attr("height", 15)
+      .attr("fill", function(d) {
+      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});
+
+        // add label next to bar
+      svg.append("g")
+        .attr("fill", "white")
+        .attr("text-anchor", "end")
+        .style("font", "12px sans-serif")
+      .selectAll("label")
+      .data(topData)
+      .enter().append("text")
+      .attr("class", "label")
+      .attr("x", d => x(d[i]) - 4)
+      .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
+      .text(d => format(d[i]));
   }else{
     var bar = svg.selectAll('.bar').data(topData);
     bar.exit().remove(); 
@@ -255,12 +285,19 @@ function change(data) {
     .attr("y", function(d) { return y(d.name); })
     .attr("width",function(d){return x(0);} )
     .attr("width",function(d) { return  x(d[selectValue]);}  )
-    .attr("height", 15);
+    .attr("height", 15)
+    .attr("fill", function(d) {
+      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});
   }
+
+
 }
 
 
-export default {top10, change};
+module.exports.top10 = top10; 
+module.exports.change = change; 
+
+// export default {top10, change};
   
 
   

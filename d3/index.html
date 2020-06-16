@@ -34,10 +34,14 @@
       <svg></svg>
     </div>
 
-    <!-- TOP10 -->
+    
 
-    <div class='container'>
-      <div class="row">
+    <div class='d-flex flex-column bd-highlight mb-3'>
+
+
+      <!-- TOP10 -->
+      
+      <div class="p-2 bd-highlight">
         <p>Criteria: </p>
         <select id="label-option">
           <option value="revenue" selected = "selected">Revenue</option>
@@ -46,17 +50,21 @@
           <option value="popularity">popularity</option>
         </select>
       </div>
-      <div class="row">
-        <div class="col">
-          <div class='chart' id="hiro_dataviz"></div>
+
+      <div class="p-2 bd-highlight" style="height: 500px">
+        <div class="col-md-12">
+          <div class='chart' id="top10"></div>
         </div>
-        <div class="col">
+      </div>
+      <!-- WORDCLOUD -->
+      <div class='p-2 bd-highlight'>
+        <div class="col-md-12">
+          <div class='chart' id="wordcloud"></div>
         </div>
       </div>
     </div>
 
   </body>
-  <script src="https://d3js.org/d3.v5.min.js"></script>
   <script src="http://underscorejs.org/underscore.js"></script>
-  <script src="js/main.js" type="module"></script>
+  <script src="js/bundle.js" type="module"></script>
 </html>
