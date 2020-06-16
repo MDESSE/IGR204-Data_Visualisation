@@ -422,6 +422,7 @@ function filterdata(data){
       ;
    
     // bold dimensions with label
+
     d3.selectAll('.label')
       .style("font-weight", function(dimension) {
           if (extents[dimensions.indexOf(dimension)][0] !== 0) return "bold";
@@ -20564,10 +20565,11 @@ var x,
     mouseover, 
     mouseout
 
+var format = d3.format(',')
 
 function top10(data){
 
-  // set the dimensions and margins of the graph
+  // set the and margins of the graph
   var margin = {top: 10, right: 30, bottom: 40, left: 100},
       width = 1000 - margin.left - margin.right,
       height = 500 - margin.top - margin.bottom;
@@ -20619,7 +20621,7 @@ function top10(data){
     .duration(200)    
     .style("opacity", 1);
 
-    tooltip .html("name: " + d.name + "<br/>" + i + " : " + d[i] + "<br/>" + "genre : "+ d.genre)
+    tooltip .html("name: " + d.name + "<br/>" + i + " : " + format(d[i]) + "<br/>" + "genre : "+ d.genre)
     .style("left", (d3.event.pageX + 10) + "px")
     .style("top", (d3.event.pageY - 15) + "px")
 
@@ -20720,10 +20722,10 @@ function top10(data){
       .attr("fill", "white")
       .attr("text-anchor", "end")
       .style("font", "12px sans-serif")
-    .selectAll("label")
+    .selectAll("label-top10")
     .data(topData)
     .enter().append("text")
-    .attr("class", "label")
+    .attr("class", "label-top10")
     .attr("x", d => x(d[i]) - 4)
     .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
     .text(d => format(d[i]));
@@ -20812,6 +20814,7 @@ function change(data) {
       .attr("height", 15)
       .attr("fill", function(d) {
       return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});
+
   }else{
     var bar = svg.selectAll('.bar').data(topData);
     bar.exit().remove(); 
@@ -20829,19 +20832,16 @@ function change(data) {
   }
 
   // add label next to bar
-    svg.append("g")
-      .attr("fill", "white")
-      .attr("text-anchor", "end")
-      .style("font", "12px sans-serif")
-    .selectAll("label")
-    .data(topData)
-    .enter().append("text")
-    .attr("class", "label")
+
+  var textlabel = svg.selectAll(".label-top10").data(topData)
+  textlabel.exit().remove()
+
+  textlabel.transition().duration(300)
     .attr("x", d => x(d[i]) - 4)
     .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
     .text(d => format(d[i]));
-}
 
+}
 
 module.exports.top10 = top10; 
 module.exports.change = change; 
