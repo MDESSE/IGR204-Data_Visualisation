@@ -5,7 +5,7 @@ var d3 = require("d3")
 
 var data;
 
-d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data) {
+d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies_clean.csv").then(function(raw_data) {
     // Convert quantitative scales to floats
 
     data = raw_data.map(function(d) {
@@ -18,7 +18,7 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data
           genre: eval(d["genres"])[0]['name'],
           name: d["original_title"],
           year: parseInt(d["release_date"].slice(0, 4)),
-          text: d[genres] + '-' + d[keywords]
+          text: d["genres"].concat(d["keywords"]).split('-').flat()
         };
       }catch{
         return {
@@ -29,7 +29,7 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data
           genre: "unknown",
           name: d["original_title"],
           year: parseInt(d["release_date"].slice(0, 4)),
-          text: d["genres"] + '-' + d["keywords"]
+          text: d["genres"].concat(d["keywords"]).split('-').flat()
         };
       }
     });
