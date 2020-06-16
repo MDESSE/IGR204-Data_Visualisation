@@ -763,7 +763,7 @@ function filterdata(data){
 //export default filterdata;
 module.exports.filterdata = filterdata;
   
-},{"./top10_movies.js":36,"d3":35}],2:[function(require,module,exports){
+},{"./top10_movies.js":3,"d3":37}],2:[function(require,module,exports){
 var filterdata  = require("./filter.js");
 var top10  = require("./top10_movies.js");
 var wordcloud = require("./wordcloud.js");
@@ -783,7 +783,8 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data
           popularity: parseFloat(d["popularity"]),
           genre: eval(d["genres"])[0]['name'],
           name: d["original_title"],
-          year: parseInt(d["release_date"].slice(0, 4))
+          year: parseInt(d["release_date"].slice(0, 4)),
+          text: d[genres] + '-' + d[keywords]
         };
       }catch{
         return {
@@ -793,16 +794,377 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data
           popularity: parseFloat(d["popularity"]),
           genre: "unknown",
           name: d["original_title"],
-          year: parseInt(d["release_date"].slice(0, 4))
+          year: parseInt(d["release_date"].slice(0, 4)),
+          text: d["genres"] + '-' + d["keywords"]
         };
       }
     });
 
     filterdata.filterdata(data)
     top10.top10(data)
-    wordcloud.wordcloud()
+    wordcloud.wordcloud(data)
   });
-},{"./filter.js":1,"./top10_movies.js":36,"./wordcloud.js":37,"d3":35}],3:[function(require,module,exports){
+},{"./filter.js":1,"./top10_movies.js":3,"./wordcloud.js":4,"d3":37}],3:[function(require,module,exports){
+// MS BGD 2019-2020 - HIROTO YAMAKAWA 
+var d3 = require("d3")
+
+var x, 
+    y, 
+    yAxis,
+    xAxis,
+    xaxislabel, 
+    yaxislabel, 
+    svg,
+    i,
+    topData, 
+    mouseover, 
+    mouseout
+
+
+function top10(data){
+
+  // set the dimensions and margins of the graph
+  var margin = {top: 10, right: 30, bottom: 40, left: 100},
+      width = 1000 - margin.left - margin.right,
+      height = 500 - margin.top - margin.bottom;
+
+  // append the svg object to the body of the page
+  svg = d3.select("#top10")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // create variables
+  x = d3.scaleLinear()
+  .range([ 0, width]);
+
+  y = d3.scaleBand()
+  .range([ 0, height ])
+  .padding(1);
+
+  // create labels
+  yaxislabel =svg.append("text")
+  .attr("text-anchor", "end")
+  .attr("transform", "rotate(0)")
+  .attr("y", 0)
+  .attr("x", -15);        
+
+  xaxislabel = svg.append("text")
+  .attr("text-anchor", "end")
+  .attr("x", width)
+  .attr("y", height + margin.top + 20);
+      
+  // create axis
+  xAxis = svg.append("g")
+  .call(d3.axisLeft(x))
+  .attr("transform", "translate(0," + height + ")");
+
+  yAxis = svg.append("g")
+  .call(d3.axisLeft(y));
+
+  // set i to "revenue" (default choice)
+  i = "revenue"
+
+  // create mouseover and mouseout functions
+  mouseover = function(d){
+    tooltip.transition()    
+    .duration(200)    
+    .style("opacity", 1);
+
+    tooltip .html("name: " + d.name + "<br/>" + i + " : " + d[i] + "<br/>" + "genre : "+ d.genre)
+    .style("left", (d3.event.pageX + 10) + "px")
+    .style("top", (d3.event.pageY - 15) + "px")
+
+    }
+
+  mouseout = function(d){
+    tooltip.transition()    
+    .duration(200)    
+    .style("opacity", 0)
+  }
+
+  // create tooltips
+  var tooltip = d3.select("body")
+      .append("div")  
+      .attr("class", "tooltip")
+      .style('position','absolute')
+      .style("opacity", 0)
+      .style("background-color", "lightsteelblue")
+      .style("border", "solid")
+      .style("border-width", "1px")
+      .style("border-radius", "5px")
+      .style("padding", "10px");
+    
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+   //./data/tmdb-movie-metadata/tmdb_5000_movies.csv
+    //initiate graph
+  initialGraph(data);
+
+    //update graph based on selection from HTML dragdown
+  d3.select("#label-option").on("change", () => change(data));
+
+  topData = data.slice(0, 20)
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // create function initialGraph
+  function initialGraph(data){
+
+    var selectValue = d3.select('select').property('value')
+
+    // select topData based on i
+    var topData = data.sort(function(a, b) {
+      return d3.descending(+a[i], +b[i]);
+      }).slice(0, 21);
+
+    // rescale the domain
+    x.domain([0, d3.max(topData, function(d) { return d[i] ;} )]);
+    y.domain(topData.map(function(d) { return d.name; }));
+
+    
+    //initiate X axis
+    xAxis
+    .call(d3.axisBottom(x))
+    .selectAll("text")
+    .attr("transform", "translate(-10,0)rotate(-20)")
+    .style("text-anchor", "end");
+
+    //initiate Y axis
+    yAxis
+    .call(d3.axisLeft(y));
+
+
+    //initiate X axis label
+    xaxislabel.text(i);
+
+    //initiate Y axis label
+    yaxislabel.text("movies");
+
+    //initiate bars, all starting at 0 at the beginning
+    svg.selectAll(".bar")
+    .data(topData)
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    .attr("x",  function(d) {return  x(0);})
+    .attr("y", function(d) { return y(d.name); })
+    .attr("width",function(d){return x(0);} )
+    .attr("height", 15)
+    .on("mouseover", mouseover)
+    .on("mouseout", mouseout);
+
+
+    //update the bar with the transition
+    svg.selectAll(".bar")
+    .transition()
+    .duration(500)
+    .attr("width",function(d) { return  x(d[i]);}  )
+    .attr("y", function(d) { return y(d.name); })
+    .attr("height", 15)
+    .attr("fill", function(d) {
+      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});;
+
+    // add label next to bar
+    svg.append("g")
+      .attr("fill", "white")
+      .attr("text-anchor", "end")
+      .style("font", "12px sans-serif")
+    .selectAll("label")
+    .data(topData)
+    .enter().append("text")
+    .attr("class", "label")
+    .attr("x", d => x(d[i]) - 4)
+    .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
+    .text(d => format(d[i]));
+
+  };
+  ////////////////////////////////////////////////////////////////////////////////////////////////
+}
+
+//create update function 
+
+function change(data) {
+
+  var selectValue = d3.select('select').property('value');
+  i = selectValue
+  //update topData
+
+  var remake
+
+  if (topData.length < 20){
+    remake = true
+  }else{
+    remake = false
+  }
+
+  topData = data.sort(function(a, b) {
+    return d3.descending(+a[selectValue], +b[selectValue]);
+  }).slice(0, 20);
+
+
+  // update x and y domain / scale       
+  x
+  .domain([0, d3.max(topData, function(d) { return d[selectValue] ;} )])
+  .call(d3.axisBottom(x));
+    
+  y
+  .domain(topData.map(function(d) { return d.name; }))
+  .call(d3.axisLeft(y));
+    
+
+  // Update x axis label   (y axis remains unchanged)
+  xaxislabel
+  .attr("text-anchor", "end")
+  .text(selectValue);
+  
+  
+  // Update the Y-axis and X-axis
+  yAxis
+  .transition()
+  .duration(1500)
+  .call(d3.axisLeft(y));
+  
+  xAxis
+  .transition()
+  .duration(1500)
+  .call(d3.axisBottom(x))
+  .selectAll("text")
+  .attr("transform", "translate(-10,0)rotate(-20)")
+  .style("text-anchor", "end");
+
+  
+  console.log(d3.event, d3.event.target == d3.select('#label-option')._groups[0][0], d3.select('#label-option')._groups[0][0])
+
+  var event_is_select = d3.event.target == d3.select('#label-option')._groups[0][0]
+
+  if (remake & event_is_select == false){
+    var bar = svg.selectAll('.bar')
+    bar.remove()
+
+    svg.selectAll(".bar")
+        .data(topData)
+        .enter()
+        .append("rect")
+        .attr("class", "bar")
+        .attr("x",  function(d) {return  x(0);})
+        .attr("y", function(d) { return y(d.name); })
+        .attr("width",function(d){return x(0);} )
+        .attr("height", 15)
+        .on("mouseover", mouseover)
+        .on("mouseout", mouseout);
+
+    svg.selectAll(".bar")
+      .transition()
+      .duration(500)
+      .attr("width",function(d) { return  x(d[i]);}  )
+      .attr("y", function(d) { return y(d.name); })
+      .attr("height", 15)
+      .attr("fill", function(d) {
+      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});
+
+        // add label next to bar
+      svg.append("g")
+        .attr("fill", "white")
+        .attr("text-anchor", "end")
+        .style("font", "12px sans-serif")
+      .selectAll("label")
+      .data(topData)
+      .enter().append("text")
+      .attr("class", "label")
+      .attr("x", d => x(d[i]) - 4)
+      .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
+      .text(d => format(d[i]));
+  }else{
+    var bar = svg.selectAll('.bar').data(topData);
+    bar.exit().remove(); 
+    // Update data:
+    bar
+    .transition()
+    .duration(500)
+    .attr("x",  function(d) {return  x(0);})
+    .attr("y", function(d) { return y(d.name); })
+    .attr("width",function(d){return x(0);} )
+    .attr("width",function(d) { return  x(d[selectValue]);}  )
+    .attr("height", 15)
+    .attr("fill", function(d) {
+      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});
+  }
+
+
+}
+
+
+module.exports.top10 = top10; 
+module.exports.change = change; 
+
+// export default {top10, change};
+  
+
+  
+       
+
+},{"d3":37}],4:[function(require,module,exports){
+var words = [];
+var layout;
+var wordsMap = {};
+
+var d3 = require("d3"),
+    cloud = require("d3-cloud");
+
+function wordcloud(data){
+  console.log(data)
+  d3.csv("data/words.csv").then(function(raw_data){
+  raw_data.map(function(d){
+      if (wordsMap.hasOwnProperty(d.words)) {
+        wordsMap[d.words]++;
+      } else {
+        wordsMap[d.words] = 1;
+      }
+  })
+  for (const [key, value] of Object.entries(wordsMap)) {
+    words.push({text: key, size: 10 + wordsMap[key] * 5})
+  }
+  layout = cloud()
+    .size([700, 400])
+    .words(words)
+    .padding(5)
+    .rotate(function() { return ~~(Math.random() * 2) * 45; })
+    .font("Impact")
+    .fontSize(function(d) { return d.size; })
+    .on("end", draw);
+
+  layout.start();
+})
+
+function draw(words) {
+  d3.select("#wordcloud").append("svg")
+      .attr("width", layout.size()[0])
+      .attr("height", layout.size()[1])
+    .append("g")
+      .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
+    .selectAll("text")
+      .data(words)
+    .enter().append("text")
+      .style("font-size", function(d) { return d.size + "px"; })
+      .style("font-family", "Impact")
+      .attr("text-anchor", "middle")
+      .attr("transform", function(d) {
+        return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+      })
+      .text(function(d) { return d.text; });
+  }
+}
+
+module.exports.wordcloud = wordcloud;
+
+},{"d3":37,"d3-cloud":9}],5:[function(require,module,exports){
 // https://d3js.org/d3-array/ v1.2.4 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -1394,7 +1756,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],4:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 // https://d3js.org/d3-axis/ v1.0.12 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -1589,7 +1951,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],5:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 // https://d3js.org/d3-brush/ v1.1.5 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dispatch'), require('d3-drag'), require('d3-interpolate'), require('d3-selection'), require('d3-transition')) :
@@ -2208,7 +2570,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-dispatch":11,"d3-drag":12,"d3-interpolate":20,"d3-selection":27,"d3-transition":32}],6:[function(require,module,exports){
+},{"d3-dispatch":13,"d3-drag":14,"d3-interpolate":22,"d3-selection":29,"d3-transition":34}],8:[function(require,module,exports){
 // https://d3js.org/d3-chord/ v1.0.6 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-array'), require('d3-path')) :
@@ -2440,7 +2802,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{"d3-array":3,"d3-path":21}],7:[function(require,module,exports){
+},{"d3-array":5,"d3-path":23}],9:[function(require,module,exports){
 (function (global){
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g=(g.d3||(g.d3 = {}));g=(g.layout||(g.layout = {}));g.cloud = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 // Word cloud layout by Jason Davies, https://www.jasondavies.com/wordcloud/
@@ -2943,7 +3305,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 },{}]},{},[1])(1)
 });
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"d3-dispatch":11}],8:[function(require,module,exports){
+},{"d3-dispatch":13}],10:[function(require,module,exports){
 // https://d3js.org/d3-collection/ v1.0.7 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -3162,7 +3524,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 // https://d3js.org/d3-color/ v1.4.1 Copyright 2020 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -3745,7 +4107,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],10:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 // https://d3js.org/d3-contour/ v1.3.2 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-array')) :
@@ -4178,7 +4540,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{"d3-array":3}],11:[function(require,module,exports){
+},{"d3-array":5}],13:[function(require,module,exports){
 // https://d3js.org/d3-dispatch/ v1.0.6 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -4275,7 +4637,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],12:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 // https://d3js.org/d3-drag/ v1.2.5 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dispatch'), require('d3-selection')) :
@@ -4511,7 +4873,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-dispatch":11,"d3-selection":27}],13:[function(require,module,exports){
+},{"d3-dispatch":13,"d3-selection":29}],15:[function(require,module,exports){
 // https://d3js.org/d3-dsv/ v1.2.0 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -4746,7 +5108,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],14:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 // https://d3js.org/d3-ease/ v1.0.6 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -5007,13 +5369,13 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],15:[function(require,module,exports){
-// https://d3js.org/d3-fetch/ v1.2.0 Copyright 2020 Mike Bostock
+},{}],17:[function(require,module,exports){
+// https://d3js.org/d3-fetch/ v1.1.2 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dsv')) :
 typeof define === 'function' && define.amd ? define(['exports', 'd3-dsv'], factory) :
-(global = global || self, factory(global.d3 = global.d3 || {}, global.d3));
-}(this, function (exports, d3Dsv) { 'use strict';
+(factory((global.d3 = global.d3 || {}),global.d3));
+}(this, (function (exports,d3Dsv) { 'use strict';
 
 function responseBlob(response) {
   if (!response.ok) throw new Error(response.status + " " + response.statusText);
@@ -5074,7 +5436,6 @@ function image(input, init) {
 
 function responseJson(response) {
   if (!response.ok) throw new Error(response.status + " " + response.statusText);
-  if (response.status === 204 || response.status === 205) return;
   return response.json();
 }
 
@@ -5084,8 +5445,8 @@ function json(input, init) {
 
 function parser(type) {
   return function(input, init)  {
-    return text(input, init).then(function(text) {
-      return (new DOMParser).parseFromString(text, type);
+    return text(input, init).then(function(text$$1) {
+      return (new DOMParser).parseFromString(text$$1, type);
     });
   };
 }
@@ -5098,21 +5459,21 @@ var svg = parser("image/svg+xml");
 
 exports.blob = blob;
 exports.buffer = buffer;
-exports.csv = csv;
 exports.dsv = dsv;
-exports.html = html;
+exports.csv = csv;
+exports.tsv = tsv;
 exports.image = image;
 exports.json = json;
-exports.svg = svg;
 exports.text = text;
-exports.tsv = tsv;
 exports.xml = xml;
+exports.html = html;
+exports.svg = svg;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-}));
+})));
 
-},{"d3-dsv":13}],16:[function(require,module,exports){
+},{"d3-dsv":15}],18:[function(require,module,exports){
 // https://d3js.org/d3-force/ v1.2.1 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-quadtree'), require('d3-collection'), require('d3-dispatch'), require('d3-timer')) :
@@ -5782,7 +6143,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{"d3-collection":8,"d3-dispatch":11,"d3-quadtree":23,"d3-timer":31}],17:[function(require,module,exports){
+},{"d3-collection":10,"d3-dispatch":13,"d3-quadtree":25,"d3-timer":33}],19:[function(require,module,exports){
 // https://d3js.org/d3-format/ v1.4.4 Copyright 2020 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -6123,7 +6484,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],18:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 // https://d3js.org/d3-geo/ v1.12.1 Copyright 2020 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-array')) :
@@ -9290,7 +9651,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{"d3-array":3}],19:[function(require,module,exports){
+},{"d3-array":5}],21:[function(require,module,exports){
 // https://d3js.org/d3-hierarchy/ v1.1.9 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -10582,7 +10943,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],20:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 // https://d3js.org/d3-interpolate/ v1.4.0 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-color')) :
@@ -11177,7 +11538,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-color":9}],21:[function(require,module,exports){
+},{"d3-color":11}],23:[function(require,module,exports){
 // https://d3js.org/d3-path/ v1.0.9 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -11320,7 +11681,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],22:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 // https://d3js.org/d3-polygon/ v1.0.6 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -11472,7 +11833,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],23:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 // https://d3js.org/d3-quadtree/ v1.0.7 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -11893,7 +12254,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],24:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 // https://d3js.org/d3-random/ v1.1.2 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -12010,7 +12371,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],25:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 // https://d3js.org/d3-scale-chromatic/ v1.5.0 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-interpolate'), require('d3-color')) :
@@ -12533,7 +12894,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-color":9,"d3-interpolate":20}],26:[function(require,module,exports){
+},{"d3-color":11,"d3-interpolate":22}],28:[function(require,module,exports){
 // https://d3js.org/d3-scale/ v2.2.2 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-collection'), require('d3-array'), require('d3-interpolate'), require('d3-format'), require('d3-time'), require('d3-time-format')) :
@@ -13700,7 +14061,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{"d3-array":3,"d3-collection":8,"d3-format":17,"d3-interpolate":20,"d3-time":30,"d3-time-format":29}],27:[function(require,module,exports){
+},{"d3-array":5,"d3-collection":10,"d3-format":19,"d3-interpolate":22,"d3-time":32,"d3-time-format":31}],29:[function(require,module,exports){
 // https://d3js.org/d3-selection/ v1.4.1 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -14691,7 +15052,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],28:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 // https://d3js.org/d3-shape/ v1.3.7 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-path')) :
@@ -16642,7 +17003,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-path":21}],29:[function(require,module,exports){
+},{"d3-path":23}],31:[function(require,module,exports){
 // https://d3js.org/d3-time-format/ v2.2.3 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-time')) :
@@ -17351,7 +17712,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-time":30}],30:[function(require,module,exports){
+},{"d3-time":32}],32:[function(require,module,exports){
 // https://d3js.org/d3-time/ v1.1.0 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -17726,7 +18087,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],31:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 // https://d3js.org/d3-timer/ v1.0.10 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -17877,7 +18238,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{}],32:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 // https://d3js.org/d3-transition/ v1.3.2 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-selection'), require('d3-dispatch'), require('d3-timer'), require('d3-interpolate'), require('d3-color'), require('d3-ease')) :
@@ -18759,7 +19120,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-color":9,"d3-dispatch":11,"d3-ease":14,"d3-interpolate":20,"d3-selection":27,"d3-timer":31}],33:[function(require,module,exports){
+},{"d3-color":11,"d3-dispatch":13,"d3-ease":16,"d3-interpolate":22,"d3-selection":29,"d3-timer":33}],35:[function(require,module,exports){
 // https://d3js.org/d3-voronoi/ v1.1.4 Copyright 2018 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
@@ -19760,7 +20121,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],34:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 // https://d3js.org/d3-zoom/ v1.8.3 Copyright 2019 Mike Bostock
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dispatch'), require('d3-drag'), require('d3-interpolate'), require('d3-selection'), require('d3-transition')) :
@@ -20259,7 +20620,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
-},{"d3-dispatch":11,"d3-drag":12,"d3-interpolate":20,"d3-selection":27,"d3-transition":32}],35:[function(require,module,exports){
+},{"d3-dispatch":13,"d3-drag":14,"d3-interpolate":22,"d3-selection":29,"d3-transition":34}],37:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', { value: true });
@@ -20548,361 +20909,4 @@ Object.keys(d3Zoom).forEach(function (k) {
 });
 exports.version = version;
 
-},{"d3-array":3,"d3-axis":4,"d3-brush":5,"d3-chord":6,"d3-collection":8,"d3-color":9,"d3-contour":10,"d3-dispatch":11,"d3-drag":12,"d3-dsv":13,"d3-ease":14,"d3-fetch":15,"d3-force":16,"d3-format":17,"d3-geo":18,"d3-hierarchy":19,"d3-interpolate":20,"d3-path":21,"d3-polygon":22,"d3-quadtree":23,"d3-random":24,"d3-scale":26,"d3-scale-chromatic":25,"d3-selection":27,"d3-shape":28,"d3-time":30,"d3-time-format":29,"d3-timer":31,"d3-transition":32,"d3-voronoi":33,"d3-zoom":34}],36:[function(require,module,exports){
-// MS BGD 2019-2020 - HIROTO YAMAKAWA 
-var d3 = require("d3")
-
-var x, 
-    y, 
-    yAxis,
-    xAxis,
-    xaxislabel, 
-    yaxislabel, 
-    svg,
-    i,
-    topData, 
-    mouseover, 
-    mouseout
-
-
-function top10(data){
-
-  // set the dimensions and margins of the graph
-  var margin = {top: 10, right: 30, bottom: 40, left: 100},
-      width = 1000 - margin.left - margin.right,
-      height = 500 - margin.top - margin.bottom;
-
-  // append the svg object to the body of the page
-  svg = d3.select("#top10")
-      .append("svg")
-      .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom)
-      .append("g")
-      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-  ////////////////////////////////////////////////////////////////////////////////////////////////
-
-  // create variables
-  x = d3.scaleLinear()
-  .range([ 0, width]);
-
-  y = d3.scaleBand()
-  .range([ 0, height ])
-  .padding(1);
-
-  // create labels
-  yaxislabel =svg.append("text")
-  .attr("text-anchor", "end")
-  .attr("transform", "rotate(0)")
-  .attr("y", 0)
-  .attr("x", -15);        
-
-  xaxislabel = svg.append("text")
-  .attr("text-anchor", "end")
-  .attr("x", width)
-  .attr("y", height + margin.top + 20);
-      
-  // create axis
-  xAxis = svg.append("g")
-  .call(d3.axisLeft(x))
-  .attr("transform", "translate(0," + height + ")");
-
-  yAxis = svg.append("g")
-  .call(d3.axisLeft(y));
-
-  // set i to "revenue" (default choice)
-  i = "revenue"
-
-  // create mouseover and mouseout functions
-  mouseover = function(d){
-    tooltip.transition()    
-    .duration(200)    
-    .style("opacity", 1);
-
-    tooltip .html("name: " + d.name + "<br/>" + i + " : " + d[i] + "<br/>" + "genre : "+ d.genre)
-    .style("left", (d3.event.pageX + 10) + "px")
-    .style("top", (d3.event.pageY - 15) + "px")
-
-    }
-
-  mouseout = function(d){
-    tooltip.transition()    
-    .duration(200)    
-    .style("opacity", 0)
-  }
-
-  // create tooltips
-  var tooltip = d3.select("body")
-      .append("div")  
-      .attr("class", "tooltip")
-      .style('position','absolute')
-      .style("opacity", 0)
-      .style("background-color", "lightsteelblue")
-      .style("border", "solid")
-      .style("border-width", "1px")
-      .style("border-radius", "5px")
-      .style("padding", "10px");
-    
-
-  ////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-   //./data/tmdb-movie-metadata/tmdb_5000_movies.csv
-    //initiate graph
-  initialGraph(data);
-
-    //update graph based on selection from HTML dragdown
-  d3.select("#label-option").on("change", () => change(data));
-
-  topData = data.slice(0, 20)
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
-  // create function initialGraph
-  function initialGraph(data){
-
-    var selectValue = d3.select('select').property('value')
-
-    // select topData based on i
-    var topData = data.sort(function(a, b) {
-      return d3.descending(+a[i], +b[i]);
-      }).slice(0, 21);
-
-    // rescale the domain
-    x.domain([0, d3.max(topData, function(d) { return d[i] ;} )]);
-    y.domain(topData.map(function(d) { return d.name; }));
-
-    
-    //initiate X axis
-    xAxis
-    .call(d3.axisBottom(x))
-    .selectAll("text")
-    .attr("transform", "translate(-10,0)rotate(-20)")
-    .style("text-anchor", "end");
-
-    //initiate Y axis
-    yAxis
-    .call(d3.axisLeft(y));
-
-
-    //initiate X axis label
-    xaxislabel.text(i);
-
-    //initiate Y axis label
-    yaxislabel.text("movies");
-
-    //initiate bars, all starting at 0 at the beginning
-    svg.selectAll(".bar")
-    .data(topData)
-    .enter()
-    .append("rect")
-    .attr("class", "bar")
-    .attr("x",  function(d) {return  x(0);})
-    .attr("y", function(d) { return y(d.name); })
-    .attr("width",function(d){return x(0);} )
-    .attr("height", 15)
-    .on("mouseover", mouseover)
-    .on("mouseout", mouseout);
-
-
-    //update the bar with the transition
-    svg.selectAll(".bar")
-    .transition()
-    .duration(500)
-    .attr("width",function(d) { return  x(d[i]);}  )
-    .attr("y", function(d) { return y(d.name); })
-    .attr("height", 15)
-    .attr("fill", function(d) {
-      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});;
-
-    // add label next to bar
-    svg.append("g")
-      .attr("fill", "white")
-      .attr("text-anchor", "end")
-      .style("font", "12px sans-serif")
-    .selectAll("label")
-    .data(topData)
-    .enter().append("text")
-    .attr("class", "label")
-    .attr("x", d => x(d[i]) - 4)
-    .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
-    .text(d => format(d[i]));
-
-  };
-  ////////////////////////////////////////////////////////////////////////////////////////////////
-}
-
-//create update function 
-
-function change(data) {
-
-  var selectValue = d3.select('select').property('value');
-  i = selectValue
-  //update topData
-
-  var remake
-
-  if (topData.length < 20){
-    remake = true
-  }else{
-    remake = false
-  }
-
-  topData = data.sort(function(a, b) {
-    return d3.descending(+a[selectValue], +b[selectValue]);
-  }).slice(0, 20);
-
-
-  // update x and y domain / scale       
-  x
-  .domain([0, d3.max(topData, function(d) { return d[selectValue] ;} )])
-  .call(d3.axisBottom(x));
-    
-  y
-  .domain(topData.map(function(d) { return d.name; }))
-  .call(d3.axisLeft(y));
-    
-
-  // Update x axis label   (y axis remains unchanged)
-  xaxislabel
-  .attr("text-anchor", "end")
-  .text(selectValue);
-  
-  
-  // Update the Y-axis and X-axis
-  yAxis
-  .transition()
-  .duration(1500)
-  .call(d3.axisLeft(y));
-  
-  xAxis
-  .transition()
-  .duration(1500)
-  .call(d3.axisBottom(x))
-  .selectAll("text")
-  .attr("transform", "translate(-10,0)rotate(-20)")
-  .style("text-anchor", "end");
-
-  
-  console.log(d3.event, d3.event.target == d3.select('#label-option')._groups[0][0], d3.select('#label-option')._groups[0][0])
-
-  var event_is_select = d3.event.target == d3.select('#label-option')._groups[0][0]
-
-  if (remake & event_is_select == false){
-    var bar = svg.selectAll('.bar')
-    bar.remove()
-
-    svg.selectAll(".bar")
-        .data(topData)
-        .enter()
-        .append("rect")
-        .attr("class", "bar")
-        .attr("x",  function(d) {return  x(0);})
-        .attr("y", function(d) { return y(d.name); })
-        .attr("width",function(d){return x(0);} )
-        .attr("height", 15)
-        .on("mouseover", mouseover)
-        .on("mouseout", mouseout);
-
-    svg.selectAll(".bar")
-      .transition()
-      .duration(500)
-      .attr("width",function(d) { return  x(d[i]);}  )
-      .attr("y", function(d) { return y(d.name); })
-      .attr("height", 15)
-      .attr("fill", function(d) {
-      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});
-  }else{
-    var bar = svg.selectAll('.bar').data(topData);
-    bar.exit().remove(); 
-    // Update data:
-    bar
-    .transition()
-    .duration(500)
-    .attr("x",  function(d) {return  x(0);})
-    .attr("y", function(d) { return y(d.name); })
-    .attr("width",function(d){return x(0);} )
-    .attr("width",function(d) { return  x(d[selectValue]);}  )
-    .attr("height", 15)
-    .attr("fill", function(d) {
-      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});
-  }
-
-  // add label next to bar
-    svg.append("g")
-      .attr("fill", "white")
-      .attr("text-anchor", "end")
-      .style("font", "12px sans-serif")
-    .selectAll("label")
-    .data(topData)
-    .enter().append("text")
-    .attr("class", "label")
-    .attr("x", d => x(d[i]) - 4)
-    .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
-    .text(d => format(d[i]));
-}
-
-
-module.exports.top10 = top10; 
-module.exports.change = change; 
-
-// export default {top10, change};
-  
-
-  
-       
-
-},{"d3":35}],37:[function(require,module,exports){
-var words = [];
-var layout;
-var wordsMap = {};
-
-var d3 = require("d3"),
-    cloud = require("d3-cloud");
-
-function wordcloud(){
-  d3.csv("data/words.csv").then(function(raw_data){
-  raw_data.map(function(d){
-      if (wordsMap.hasOwnProperty(d.words)) {
-        wordsMap[d.words]++;
-      } else {
-        wordsMap[d.words] = 1;
-      }
-  })
-  for (const [key, value] of Object.entries(wordsMap)) {
-    words.push({text: key, size: 10 + wordsMap[key] * 5})
-  }
-  layout = cloud()
-    .size([700, 400])
-    .words(words)
-    .padding(5)
-    .rotate(function() { return ~~(Math.random() * 2) * 45; })
-    .font("Impact")
-    .fontSize(function(d) { return d.size; })
-    .on("end", draw);
-
-  layout.start();
-})
-
-function draw(words) {
-  d3.select("#wordcloud").append("svg")
-      .attr("width", layout.size()[0])
-      .attr("height", layout.size()[1])
-    .append("g")
-      .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
-    .selectAll("text")
-      .data(words)
-    .enter().append("text")
-      .style("font-size", function(d) { return d.size + "px"; })
-      .style("font-family", "Impact")
-      .attr("text-anchor", "middle")
-      .attr("transform", function(d) {
-        return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
-      })
-      .text(function(d) { return d.text; });
-  }
-}
-
-module.exports.wordcloud = wordcloud;
-
-},{"d3":35,"d3-cloud":7}]},{},[2]);
+},{"d3-array":5,"d3-axis":6,"d3-brush":7,"d3-chord":8,"d3-collection":10,"d3-color":11,"d3-contour":12,"d3-dispatch":13,"d3-drag":14,"d3-dsv":15,"d3-ease":16,"d3-fetch":17,"d3-force":18,"d3-format":19,"d3-geo":20,"d3-hierarchy":21,"d3-interpolate":22,"d3-path":23,"d3-polygon":24,"d3-quadtree":25,"d3-random":26,"d3-scale":28,"d3-scale-chromatic":27,"d3-selection":29,"d3-shape":30,"d3-time":32,"d3-time-format":31,"d3-timer":33,"d3-transition":34,"d3-voronoi":35,"d3-zoom":36}]},{},[2]);

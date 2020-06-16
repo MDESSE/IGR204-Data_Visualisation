@@ -5,7 +5,8 @@ var wordsMap = {};
 var d3 = require("d3"),
     cloud = require("d3-cloud");
 
-function wordcloud(){
+function wordcloud(data){
+  console.log(data)
   d3.csv("data/words.csv").then(function(raw_data){
   raw_data.map(function(d){
       if (wordsMap.hasOwnProperty(d.words)) {

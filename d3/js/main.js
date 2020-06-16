@@ -17,7 +17,8 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data
           popularity: parseFloat(d["popularity"]),
           genre: eval(d["genres"])[0]['name'],
           name: d["original_title"],
-          year: parseInt(d["release_date"].slice(0, 4))
+          year: parseInt(d["release_date"].slice(0, 4)),
+          text: d[genres] + '-' + d[keywords]
         };
       }catch{
         return {
@@ -27,12 +28,13 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data
           popularity: parseFloat(d["popularity"]),
           genre: "unknown",
           name: d["original_title"],
-          year: parseInt(d["release_date"].slice(0, 4))
+          year: parseInt(d["release_date"].slice(0, 4)),
+          text: d["genres"] + '-' + d["keywords"]
         };
       }
     });
 
     filterdata.filterdata(data)
     top10.top10(data)
-    wordcloud.wordcloud()
+    wordcloud.wordcloud(data)
   });
