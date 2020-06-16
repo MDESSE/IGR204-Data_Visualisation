@@ -1,5 +1,7 @@
-import filterdata from "./filter.js";
-import top10 from "./top10_movies.js";
+var filterdata  = require("./filter.js");
+var top10  = require("./top10_movies.js");
+var wordcloud = require("./wordcloud.js");
+var d3 = require("d3")
 
 var data;
 
@@ -30,6 +32,7 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data
       }
     });
 
-    filterdata(data)
+    filterdata.filterdata(data)
     top10.top10(data)
+    wordcloud.wordcloud()
   });

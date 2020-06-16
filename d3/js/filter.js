@@ -2,8 +2,11 @@
 // Copyright (c) 2012, Kai Chang
 // Released under the BSD License: http://opensource.org/licenses/BSD-3-Clause
 
-import top10 from "./top10_movies.js";
+//import top10 from "./top10_movies.js";
 
+var top10 = require("./top10_movies.js");
+
+var d3 = require("d3")
 
 function filterdata(data){
 
@@ -756,5 +759,6 @@ function filterdata(data){
   }
 }
 
-export default filterdata;
+//export default filterdata;
+module.exports.filterdata = filterdata;
   
