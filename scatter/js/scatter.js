@@ -70,7 +70,7 @@ var hideTooltip = function (d) {
 d3.csv(data_path).then(function (raw_data) {
   // Convert quantitative scales to floats
   data = raw_data.map(function (d){
-    console.log(eval(d["genres"])[0]['name'])
+    alert(eval(d["genres"]))
   })})
 
  
