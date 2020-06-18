@@ -10,28 +10,36 @@ For the second milestone, we propose to compare 4 different visualizations for a
 
 ## 0. Data exploration
 
-We chose a first dataset based on [The Movie Database (TMDb)](https://www.kaggle.com/tmdb/themoviedb.org) to begin our exploration. This dataset contains 5000 entries of movies with several attributes:
-- movie's description (name, genre, overview, runtime, release date) 
-- The names of actors and people in the production team.
-- The movie's popularity
-- The actors' popularity
-- The production companies and countries
-- People's ratings
+We chose a first dataset based on [The Movie Database (TMDb)](https://www.kaggle.com/tmdb/themoviedb.org) to begin our exploration. This dataset contains 5 000 entries of movies with several attributes:
+- Movie's description (name, genre, overview, runtime, release date) ,
+- The names of actors and people in the production team,
+- The movie's popularity,
+- The actors' popularity,
+- The production companies and countries,
+- People's ratings.
 
  By a quick look on the data, we could extract some statistics. This dataset contains:
- - 50815 unique actors
- - 10808 unique production companies
- - 88 unique countries 
+ - 50 815 unique actors,
+ - 10 808 unique production companies,
+ - 88 unique countries.
 
- ![movies_distribution](https://github.com/MDESSE/IGR204-Data_Visualisation/blob/master/01_Project_description/03_Milestone3%20-%20Project%20Design%20Document/img/movies_distribution.png)
 
- ![companies_distribution](https://github.com/MDESSE/IGR204-Data_Visualisation/blob/master/01_Project_description/03_Milestone3%20-%20Project%20Design%20Document/img/companies_distribution.png)
+
+<img src='img/movies_distribution.png'></img>
+
+ 
+
+<img src='img/companies_distribution.png'></img>
 
  The two previous barplots show the distribution of movies and companies across the countries. Our dataset is mainly focused on the USA movies. This could be a limit for us and we may need to find additional data.
 
-![top_100](https://github.com/MDESSE/IGR204-Data_Visualisation/blob/master/01_Project_description/03_Milestone3%20-%20Project%20Design%20Document/img/top_100_most_producing_companies.png)
+<img src='img/top_100_most_producing_companies.png'></img>
 
- ![100_random](https://github.com/MDESSE/IGR204-Data_Visualisation/blob/master/01_Project_description/03_Milestone3%20-%20Project%20Design%20Document/img/100_random_companies.png)
+<img src='img/100_random_companies.png'></img>
+
+
+
+
 
  This two bar plots show the number of movies produced by production companies. The color is linked to the country of production. We clearly see the ranking between the countries based on the number of movies produced.
 

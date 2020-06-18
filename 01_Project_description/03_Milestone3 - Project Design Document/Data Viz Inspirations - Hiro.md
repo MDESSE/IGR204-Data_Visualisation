@@ -2,7 +2,8 @@
 
 J'ai remplacé les liens par un mot pour faciliter les échanges 
 
-
+**[new] https://uw-cse442-wi20.github.io/FP-oscar-nominations/
+[new] https://uw-cse442-wi20.github.io/FP-oscars/**
 
 ## All in one (Several Features ) 
 

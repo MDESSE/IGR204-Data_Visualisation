@@ -1,0 +1,52 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    
+    <link href='css/app.css' rel='stylesheet' type='text/css'></style>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+
+    
+     
+
+    <title>Scatter-mde</title>
+
+    <h1>Scatter plot for sucess movies ! </h1>
+
+</head>
+<body>
+
+    <div class="choose"></div>
+        <div class="selector">
+            <p>X axis : </p>
+            <select id="X_axis_selector">
+            <option value="revenue" selected = "selected">Revenue</option>
+            <option value="budget">Budget</option>
+            <option value="vote_average">Vote average</option>
+            <option value="popularity">Popularity</option>
+            </select>
+        </div>
+
+        <div class="selector">
+            <p>Y axis : </p>
+            <select id="Y_axis_selector">
+            <option value="revenue" selected = "selected">Revenue</option>
+            <option value="budget">Budget</option>
+            <option value="vote_average">Vote average</option>
+            <option value="popularity">Popularity</option>
+            </select>
+        </div>  
+    </div>  
+
+    <div id = scatter_plot></div>
+    
+
+
+
+    <script type="text/javascript" src="js/scatter.js"></script> 
+    
+    
+</body>
+</html>
