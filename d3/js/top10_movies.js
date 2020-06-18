@@ -237,8 +237,9 @@ function change(data) {
   console.log(d3.event, d3.event.target == d3.select('#label-option')._groups[0][0], d3.select('#label-option')._groups[0][0])
 
   var event_is_select = d3.event.target == d3.select('#label-option')._groups[0][0]
-
+  console.log(event_is_select)
   if (remake & event_is_select == false){
+    console.log(event_is_select)
     var bar = svg.selectAll('.bar')
     bar.remove()
 
