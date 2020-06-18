@@ -4,7 +4,7 @@ body{
 
 svg {
     margin: 1% 3%;
-    padding: 1% 3%;
+    padding: 1% ;
 }
 
 .bubbles {
@@ -27,3 +27,10 @@ div.tooltip {
     border-radius: 8px; 
     vertical-align: 50%;  
 }
+
+.selector {
+    display: inline-block;
+    width: 200px;
+    height: 100px;
+    margin-left: auto;
+  }

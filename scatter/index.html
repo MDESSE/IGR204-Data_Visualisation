@@ -18,7 +18,31 @@
 </head>
 <body>
 
+    <div class="choose"></div>
+        <div class="selector">
+            <p>X axis : </p>
+            <select id="X_axis_selector">
+            <option value="revenue" selected = "selected">Revenue</option>
+            <option value="budget">Budget</option>
+            <option value="vote_average">Vote average</option>
+            <option value="popularity">Popularity</option>
+            </select>
+        </div>
+
+        <div class="selector">
+            <p>Y axis : </p>
+            <select id="Y_axis_selector">
+            <option value="revenue" selected = "selected">Revenue</option>
+            <option value="budget">Budget</option>
+            <option value="vote_average">Vote average</option>
+            <option value="popularity">Popularity</option>
+            </select>
+        </div>  
+    </div>  
+
     <div id = scatter_plot></div>
+    
+
 
 
     <script type="text/javascript" src="js/scatter.js"></script> 
