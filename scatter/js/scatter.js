@@ -9,7 +9,7 @@ xx = 40
 var margin = {top: 10+xx, right: 30+xx, bottom: 30+xx, left: 60+xx},
     width = 1200 //- margin.left - margin.right,
     height = 500 - margin.top - margin.bottom,
-    data_path = "../../data/movies_details.csv"
+    data_path = "../tmdb_5000_movies.csv"
 
 // append the svg object to the body of the page
 var svg = d3.select("#scatter_plot")
@@ -77,7 +77,7 @@ d3.csv(data_path).then(function (raw_data) {
         revenue: parseFloat(d["revenue"]),
         vote_average: parseFloat(d["vote_average"]),
         popularity: parseFloat(d["popularity"]),
-        genre: eval(d["genres"])[0],
+        genre: eval(d["genres"])[0]['name'],
         name: d["original_title"],
         year: parseInt(d["release_date"].slice(0, 4))
       };
