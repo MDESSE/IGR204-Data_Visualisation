@@ -1,3 +1,4 @@
+
 /*
 References :
 - simple scatter plot : https://www.d3-graph-gallery.com/graph/scatter_basic.html
@@ -9,12 +10,19 @@ References :
 var d3 = require("d3")
 // var d3chromatic = require("d3-scale-chromatic")
 
-var xx = 40
+var xx = 20
 var margin = {top: 10+xx, right: 30+xx, bottom: 30+xx, left: 60+xx},
     width = 1200, //- margin.left - margin.right,
     height = 500 - margin.top - margin.bottom,
-    data_path = "../tmdb_5000_movies.csv"
-
+    data_path = "../tmdb_5000_movies.csv",
+    x, 
+    y,
+    xAxis,
+    yAxis,
+    xaxislabel, 
+    yaxislabel,
+    mouseover, 
+    mouseout;
 
 // append the svg object to the body of the page
 var svg = d3.select("#scatter_plot")
@@ -37,7 +45,7 @@ var myColor = d3.scaleOrdinal()
   'Science Fiction', 'Foreign', 'Music', 'Thriller'])
   .range(d3.schemeSet2);
 
-
+/*
 // -1- Create a tooltip div that is hidden by default:
 var tooltip = d3.select("#scatter_plot")
   .append("div")
@@ -57,7 +65,8 @@ var showTooltip = function (d) {
     .style("opacity", 0.8)
     .html("<b>Title: </b>" + d.name + "<br/>" 
     + "<b>Budget: </b>" + "$ "+Math.ceil(d.budget) / 10**6 +" M "+ "<br/>" 
-    + "<b>Revenue: </b>" + "$ "+Math.ceil(d.revenue / 10**6)+" M " + d.genre)
+    + "<b>Revenue: </b>" + "$ "+Math.ceil(d.revenue / 10**6)+" M " + "<br/>"
+    + d.genre)
     .style("left", (d3.mouse(this)[0] + 30) + "px")
     .style("top", (d3.mouse(this)[1] + 30) + "px")
 }
@@ -72,13 +81,44 @@ var hideTooltip = function (d) {
     .duration(200)
     .style("opacity", 0)
 }
+*/
 
-var x, 
-    y,
-    xAxis,
-    yAxis
+mouseover = function(d){
+  tooltip.transition()    
+  .duration(200)    
+  .style("opacity", 1);
+
+  tooltip .html("<b>Title: </b>" + d.name + "<br/>" 
+  + "<b>Budget: </b>" + "$ "+Math.ceil(d.budget) / 10**6 +" M "+ "<br/>" 
+  + "<b>Revenue: </b>" + "$ "+Math.ceil(d.revenue / 10**6)+" M " + "<br/>"
+  + d.genre)
+  .style("left", (d3.event.pageX + 10) + "px")
+  .style("top", (d3.event.pageY - 15) + "px")
+
+  }
+
+mouseout = function(d){
+  tooltip.transition()    
+  .duration(200)    
+  .style("opacity", 0)
+}
+
+// create tooltips
+var tooltip = d3.select("body")
+    .append("div")  
+    .attr("class", "tooltip")
+    .style('position','absolute')
+    .style("opacity", 0)
+    .style("background-color", "lightsteelblue")
+    .style("border", "solid")
+    .style("border-width", "1px")
+    .style("border-radius", "5px")
+    .style("padding", "10px");
+
+
 
 function scatter(data){
+  //alert("connected")
 
   var i = "revenue"
   var j= "budget"
@@ -86,43 +126,37 @@ function scatter(data){
   var topData = data.sort(function (a, b) {
     return d3.descending(+a[i], +b[i]);
   }).slice(0, 100);
-  
-
+ 
   // Add X axis
   x = d3.scaleLinear()
-    //.domain([0, 5 * 10**8])
     .domain([d3.min(topData, function(d) { return d[i] ;} ), d3.max(topData, function(d) { return d[i] ;} )])
     .range([0, width]);
-  svg.append("g")
-    .attr("transform", "translate(0," + height + ")")
-    .call(d3.axisBottom(x));
-
-  xAxis = svg.append("text")
-    .attr("transform",
-      "translate(" + (width / 2) + " ," +
-      (height + margin.top + 10) + ")")
-    .style("text-anchor", "middle")
-    .text(i);
-
-
-
+  
   // Add Y axis
   y = d3.scaleLinear()
-  .domain([d3.min(topData, function(d) { return d[j] ;} ), d3.max(topData, function(d) { return d[j] ;} )])  
-  //.domain([0, 10**8])
+    .domain([d3.min(topData, function (d) { return d[j]; }), d3.max(topData, function (d) { return d[j]; })])
     .range([height, 0]);
-  svg.append("g")
-    .call(d3.axisLeft(y));
 
-  yAxis = svg.append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("y", 0 - margin.left)
-    .attr("x", 0 - (height / 2))
-    .attr("dy", "1em")
-    .style("text-anchor", "middle")
-    .text(j);  
+ xAxis = svg.append("g")
+ .call(d3.axisBottom(x))
+ .attr("transform", "translate(0," + height + ")");
 
-    
+ yAxis = svg.append("g")
+  .call(d3.axisLeft(y));
+  
+xaxislabel = svg.append("text")
+  .attr("text-anchor", "end")
+  .attr("x", width)
+  .attr("y", height + margin.top)
+  .text(i);
+
+yaxislabel = svg.append("text")
+  .attr("text-anchor", "end")
+  .attr("transform", "rotate(0)")
+  .attr("y", 0)
+  .attr("x", -10)
+  .text(j);
+
   // Add dots
 
   svg.append('g')
@@ -136,12 +170,16 @@ function scatter(data){
       .attr("r", (d) => rscale(d.popularity))
       .style("fill", "#141AC9")
       .style("fill", (d) => myColor(d.genre))
+    .on("mouseover", mouseover)
+    .on("mouseout", mouseout);
+    /*
     .on("mouseover", showTooltip )
     .on("mousemove", moveTooltip )
     .on("mouseleave", hideTooltip )
+    */
 
-  d3.select("#X_axis_selector").on("change", () => change(data));
-  d3.select("#Y_axis_selector").on("change", () => change(data));
+  d3.select("#X_axis_selector").on("change", () => change_scatter(data));
+  d3.select("#Y_axis_selector").on("change", () => change_scatter(data));
 
 }
 
@@ -153,8 +191,8 @@ function change(data) {
 
   console.log(selectValueX, selectValueY)
 
-  var i = "revenue"
-  var j= "budget"
+  var i = selectValueX
+  var j= selectValueY
 
   var topData = data.sort(function (a, b) {
     return d3.descending(+a[i], +b[i]);
@@ -162,43 +200,40 @@ function change(data) {
 
   // update x and y domain / scale       
   x.domain([d3.min(topData, function(d) { return d[i] ;} ), d3.max(topData, function(d) { return d[i] ;} )])
-    .range([0, width])
     .call(d3.axisLeft(x))
-    
-  y.domain([d3.min(topData, function(d) { return d[j] ;} ), d3.max(topData, function(d) { return d[j] ;} )])  
-  //.domain([0, 10**8])
-    .range([height, 0])
-    .call(d3.axisLeft(y))
 
+  y.domain([d3.min(topData, function (d) { return d[j]; }), d3.max(topData, function (d) { return d[j]; })])
+    .call(d3.axisLeft(y))
+    
+  xAxis
+    .transition()
+    .duration(1500)
+    .call(d3.axisBottom(x))
+    .selectAll("text")
+    .style("text-anchor", "middle");
+  
   yAxis
   .transition()
   .duration(1500)
   .call(d3.axisLeft(y))
   .selectAll("text")
-  .attr("transform", "rotate(-90)")
-    .attr("y", 0 - margin.left)
-    .attr("x", 0 - (height / 2))
-    .attr("dy", "1em")
-    .style("text-anchor", "middle");
+  .style("text-anchor", "middle");
   
-  xAxis
-  .transition()
-  .duration(1500)
-  .call(d3.axisBottom(x))
-  .selectAll("text")
-  .attr("transform",
-    "translate(" + (width / 2) + " ," +
-    (height + margin.top + 10) + ")")
-  .style("text-anchor", "middle")
+  xaxislabel
+    .attr("text-anchor", "middle")
+    .text(selectValueX);
 
-  
+  yaxislabel
+    .attr("text-anchor", "end")
+    .text(selectValueY);
   
   var dots = d3.selectAll(".bubbles").data(topData)
 
   dots.exit().remove(); 
 
-  dots.attr("cy", (d) => y(d.budget))
-      .attr("cx", (d) => x(d.revenue))
+  dots.attr("cx", function(d) {return  x(d[i]);})
+  //.attr("cy", (d) => y(d.budget))
+      .attr("cy", function(d) {return  y(d[j]);})
       .attr("r", (d) => rscale(d.popularity))
       .style("fill", "#141AC9")
       .style("fill", (d) => myColor(d.genre))
