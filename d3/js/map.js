@@ -1,19 +1,45 @@
 
 var d3 = require("d3")
 var d3legend = require("d3-svg-legend")
+let color_scale
+
+var tooltip = d3.select("body")
+.append("div")  
+.attr("class", "tooltip")
+.style('position','absolute')
+.style("opacity", 0)
+.style("background-color", "lightsteelblue")
+.style("border", "solid")
+.style("border-width", "1px")
+.style("border-radius", "5px")
+.style("padding", "10px");
+
+var mouseover = function(d, country_count){
+    tooltip.transition()    
+    .duration(200)    
+    .style("opacity", 1);
+
+    tooltip .html("Name: " + d["properties"]["name"] + "<br/>Number of movies: " + country_count[d["properties"]["name"]])
+    .style("left", (d3.event.pageX + 10) + "px")
+    .style("top", (d3.event.pageY - 15) + "px")
+
+    }
+
+var mouseout = function(d){
+    tooltip.transition()    
+    .duration(200)    
+    .style("opacity", 0)
+}
 
 function map(data){
     var [country_count, country_max] = count_country(data)
 
-    let color_scale = d3.scalePow()
-        .domain([0, country_max])
+    color_scale = d3.scaleLog()
+        .domain([1, country_max])
         .range([d3.interpolateYlGnBu(0), d3.interpolateYlGnBu(1)])
 
-    var legend = d3legend.legendColor()
+    var map_legend = d3legend.legendColor()
         .scale(color_scale);
-    
-
-    console.log(color_scale)
 
     var margin = { top: 50, left:50, right: 50, bottom: 50},
         height = 400 - margin.top - margin.bottom,
@@ -30,22 +56,22 @@ function map(data){
     d3.json("./data/map/countries.json").then((d) => {
         ready( d , country_count)
 
-        var legendWidth = width * 0.6, legendHeight = 10;
-
         //Color Legend container
-        var legendsvg = svg.append("g")
-            .attr("class", "legendWrapper")
-            .attr("transform", "translate(" + (width - 50) + "," + 70 + ")");
+        // var legendsvg = svg.append("g")
+        //     .attr("class", "legendWrapper")
+        //     .attr("transform", "translate(" + (width - 50) + "," + 70 + ")");
 
-        legendsvg.append("g")
-            .call(legend)
+        // console.log(map_legend)
+        
+        // legendsvg.append("g")
+        //     .call(map_legen  d)
             
-        //Append title
-        legendsvg.append("text")
-            .attr("class", "legendTitle")
-            .attr("x", 0)
-            .attr("y", -2)
-            .text("Legend");
+        // //Append title
+        // legendsvg.append("text")
+        //     .attr("class", "legendTitle")
+        //     .attr("x", 0)
+        //     .attr("y", -2)
+        //     .text("Legend");
     })
 
     //Create projection and center it (translate) and scaleit
@@ -70,7 +96,7 @@ function map(data){
 
         for (const i in countries_name){
             if (!(countries_name[i]['name'] in country_count)){
-                country_count[countries_name[i]['name']] = 0
+                country_count[countries_name[i]['name']] = 1
             }
         }
 
@@ -81,39 +107,11 @@ function map(data){
             .attr("class", "country")
             .attr("d", path)
             .attr("fill", (d) => color_scale(country_count[d["properties"]["name"]]))
-            .on("mouseover", mouseover )
-            .on("mouseout", mouseout);
+            .on("mouseover", (d) => mouseover(d, country_count) )
+            .on("mouseout", (d) => mouseout(d));
 
     }
 
-    var mouseover = function(d){
-        tooltip.transition()    
-        .duration(200)    
-        .style("opacity", 1);
-    
-        tooltip .html("Name: " + d["properties"]["name"] + "<br/>Number of movies: " + country_count[d["properties"]["name"]])
-        .style("left", (d3.event.pageX + 10) + "px")
-        .style("top", (d3.event.pageY - 15) + "px")
-    
-        }
-    
-    var mouseout = function(d){
-        tooltip.transition()    
-        .duration(200)    
-        .style("opacity", 0)
-    }
-
-    // create tooltips
-    var tooltip = d3.select("body")
-        .append("div")  
-        .attr("class", "tooltip")
-        .style('position','absolute')
-        .style("opacity", 0)
-        .style("background-color", "lightsteelblue")
-        .style("border", "solid")
-        .style("border-width", "1px")
-        .style("border-radius", "5px")
-        .style("padding", "10px");
 };
 
 function change(data){
@@ -123,6 +121,10 @@ function change(data){
     d3.json("./data/map/countries.json").then((country_data) => {
             
         var [country_count, country_max] = count_country(data)
+
+        color_scale = d3.scaleLog()
+        .domain([1, country_max])
+        .range([d3.interpolateYlGnBu(0), d3.interpolateYlGnBu(1)])
 
         // Transform raw country_data
         var countries = topojson.feature(country_data, country_data.objects.units).features
@@ -141,6 +143,8 @@ function change(data){
         //Update Color
         svg.selectAll(".country")
             .attr("fill", (d) => color_scale(country_count[d["properties"]["name"]]))
+            .on("mouseover", (d) => mouseover(d, country_count))
+            .on("mouseout", (d) => mouseout(d));
     })
 };
 
@@ -161,4 +165,5 @@ function count_country(data){
     return [country_count, country_max]
 }
 
-module.exports.map = map; 
+module.exports.map = map;
+module.exports.change = change; 
