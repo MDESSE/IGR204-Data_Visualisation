@@ -3,8 +3,8 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
     <title>Movie Database Explorer</title>
-    <link rel="stylesheet" type="text/css" href="css/parallel.css" />
     <link rel="stylesheet" type="text/css" href="css/map.css" />
+    <link rel="stylesheet" type="text/css" href="css/main.css" />
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
   </head>
   <body>
@@ -36,6 +36,33 @@
     </div>
 
     
+    <!-- SCATTERPLOT -->
+
+    <div class="choose"></div>
+        <div class="selector">
+            <p>X axis : </p>
+            <select id="X_axis_scatter">
+            <option value="revenue" selected = "selected">Revenue</option>
+            <option value="budget">Budget</option>
+            <option value="vote_average">Vote average</option>
+            <option value="popularity">Popularity</option>
+            </select>
+        </div>
+
+        <div class="selector">
+            <p>Y axis : </p>
+            <select id="Y_axis_scatter">
+            <option value="revenue" selected = "selected">Revenue</option>
+            <option value="budget">Budget</option>
+            <option value="vote_average">Vote average</option>
+            <option value="popularity">Popularity</option>
+            </select>
+        </div>  
+    </div>  
+
+    <div class='chart' id = scatter_plot style="height: 500px"></div>
+
+
 
     <div class='d-flex flex-column bd-highlight mb-3'>
 
