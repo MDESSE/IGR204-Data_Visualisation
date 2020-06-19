@@ -41,7 +41,6 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies_clean.csv").then(function(ra
     filterdata.filterdata(data)
     top10.top10(data)
     scatter.scatter(data)
-    wordcloud.wordcloud()
     map.map(data)
     wordcloud.wordcloud(data)
   });
