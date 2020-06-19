@@ -8,6 +8,7 @@
 var top10 = require("./top10_movies.js");
 var map = require("./map.js")
 var scatter = require("./scatter.js")
+var wordcloud = require("./wordcloud.js");
 
 var d3 = require("d3")
 
@@ -499,8 +500,12 @@ function filterdata(data){
         brush()
       }  
       top10.change(selected)
+<<<<<<< HEAD
       map.change(selected)
       scatter.change(selected)
+=======
+      wordcloud.change(selected)
+>>>>>>> integrate-wordcloud
   }
 
   // render a set of polylines on a canvas
@@ -769,10 +774,14 @@ function filterdata(data){
 module.exports.filterdata = filterdata;
   
 <<<<<<< HEAD
+<<<<<<< HEAD
 },{"./scatter.js":3,"./top10_movies.js":4,"d3":38}],2:[function(require,module,exports){
 =======
 },{"./map.js":3,"./scatter.js":4,"./top10_movies.js":5,"d3":45}],2:[function(require,module,exports){
 >>>>>>> 28e85b5a5276ff671af6daa679f73bada41c9a8f
+=======
+},{"./top10_movies.js":3,"./wordcloud.js":4,"d3":37}],2:[function(require,module,exports){
+>>>>>>> integrate-wordcloud
 var filterdata  = require("./filter.js");
 var top10  = require("./top10_movies.js");
 var wordcloud = require("./wordcloud.js");
@@ -782,7 +791,7 @@ var scatter = require("./scatter.js");
 
 var data;
 
-d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data) {
+d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies_clean.csv").then(function(raw_data) {
     // Convert quantitative scales to floats
 
     data = raw_data.map(function(d) {
@@ -795,7 +804,11 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data
           genre: eval(d["genres"])[0]['name'],
           name: d["original_title"],
           year: parseInt(d["release_date"].slice(0, 4)),
+<<<<<<< HEAD
           country: eval(d["production_countries"])[0]["name"]//["iso_3166_1"]
+=======
+          text: d["genres"].concat(d["keywords"]).split('-').flat()
+>>>>>>> integrate-wordcloud
         };
       }catch{
         return {
@@ -806,13 +819,18 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies.csv").then(function(raw_data
           genre: "unknown",
           name: d["original_title"],
           year: parseInt(d["release_date"].slice(0, 4)),
+<<<<<<< HEAD
           country: "unknown"
+=======
+          text: d["genres"].concat(d["keywords"]).split('-').flat()
+>>>>>>> integrate-wordcloud
         };
       }
     });
 
     filterdata.filterdata(data)
     top10.top10(data)
+<<<<<<< HEAD
     scatter.scatter(data)
     wordcloud.wordcloud()
     map.map(data)
@@ -1629,6 +1647,1186 @@ var mouseout = function(d){
 
 function map(data){
     var [country_count, country_max] = count_country(data)
+=======
+    wordcloud.wordcloud(data)
+  });
+},{"./filter.js":1,"./top10_movies.js":3,"./wordcloud.js":4,"d3":37}],3:[function(require,module,exports){
+// MS BGD 2019-2020 - HIROTO YAMAKAWA 
+var d3 = require("d3")
+
+var x, 
+    y, 
+    yAxis,
+    xAxis,
+    xaxislabel, 
+    yaxislabel, 
+    svg,
+    i,
+    topData, 
+    mouseover, 
+    mouseout
+
+var format = d3.format(',')
+
+function top10(data){
+
+  // set the and margins of the graph
+  var margin = {top: 10, right: 30, bottom: 40, left: 100},
+      width = 1000 - margin.left - margin.right,
+      height = 500 - margin.top - margin.bottom;
+
+  // append the svg object to the body of the page
+  svg = d3.select("#top10")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // create variables
+  x = d3.scaleLinear()
+  .range([ 0, width]);
+
+  y = d3.scaleBand()
+  .range([ 0, height ])
+  .padding(1);
+
+  // create labels
+  yaxislabel =svg.append("text")
+  .attr("text-anchor", "end")
+  .attr("transform", "rotate(0)")
+  .attr("y", 0)
+  .attr("x", -15);        
+
+  xaxislabel = svg.append("text")
+  .attr("text-anchor", "end")
+  .attr("x", width)
+  .attr("y", height + margin.top + 20);
+      
+  // create axis
+  xAxis = svg.append("g")
+  .call(d3.axisLeft(x))
+  .attr("transform", "translate(0," + height + ")");
+
+  yAxis = svg.append("g")
+  .call(d3.axisLeft(y));
+
+  // set i to "revenue" (default choice)
+  i = "revenue"
+
+  // create mouseover and mouseout functions
+  mouseover = function(d){
+    tooltip.transition()    
+    .duration(200)    
+    .style("opacity", 1);
+
+    tooltip .html("name: " + d.name + "<br/>" + i + " : " + format(d[i]) + "<br/>" + "genre : "+ d.genre)
+    .style("left", (d3.event.pageX + 10) + "px")
+    .style("top", (d3.event.pageY - 15) + "px")
+
+    }
+
+  mouseout = function(d){
+    tooltip.transition()    
+    .duration(200)    
+    .style("opacity", 0)
+  }
+
+  // create tooltips
+  var tooltip = d3.select("body")
+      .append("div")  
+      .attr("class", "tooltip")
+      .style('position','absolute')
+      .style("opacity", 0)
+      .style("background-color", "lightsteelblue")
+      .style("border", "solid")
+      .style("border-width", "1px")
+      .style("border-radius", "5px")
+      .style("padding", "10px");
+    
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+   //./data/tmdb-movie-metadata/tmdb_5000_movies.csv
+    //initiate graph
+  initialGraph(data);
+
+    //update graph based on selection from HTML dragdown
+  d3.select("#label-option").on("change", () => change(data));
+
+  topData = data.slice(0, 20)
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // create function initialGraph
+  function initialGraph(data){
+
+    var selectValue = d3.select('select').property('value')
+
+    // select topData based on i
+    var topData = data.sort(function(a, b) {
+      return d3.descending(+a[i], +b[i]);
+      }).slice(0, 21);
+
+    // rescale the domain
+    x.domain([0, d3.max(topData, function(d) { return d[i] ;} )]);
+    y.domain(topData.map(function(d) { return d.name; }));
+
+    
+    //initiate X axis
+    xAxis
+    .call(d3.axisBottom(x))
+    .selectAll("text")
+    .attr("transform", "translate(-10,0)rotate(-20)")
+    .style("text-anchor", "end");
+
+    //initiate Y axis
+    yAxis
+    .call(d3.axisLeft(y));
+
+
+    //initiate X axis label
+    xaxislabel.text(i);
+
+    //initiate Y axis label
+    yaxislabel.text("movies");
+
+    //initiate bars, all starting at 0 at the beginning
+    svg.selectAll(".bar")
+    .data(topData)
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    .attr("x",  function(d) {return  x(0);})
+    .attr("y", function(d) { return y(d.name); })
+    .attr("width",function(d){return x(0);} )
+    .attr("height", 15)
+    .on("mouseover", mouseover)
+    .on("mouseout", mouseout);
+
+
+    //update the bar with the transition
+    svg.selectAll(".bar")
+    .transition()
+    .duration(500)
+    .attr("width",function(d) { return  x(d[i]);}  )
+    .attr("y", function(d) { return y(d.name); })
+    .attr("height", 15)
+    .attr("fill", function(d) {
+      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});;
+
+    // add label next to bar
+    svg.append("g")
+      .attr("fill", "white")
+      .attr("text-anchor", "end")
+      .style("font", "12px sans-serif")
+    .selectAll("label-top10")
+    .data(topData)
+    .enter().append("text")
+    .attr("class", "label-top10")
+    .attr("x", d => x(d[i]) - 4)
+    .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
+    .text(d => format(d[i]));
+
+  };
+  ////////////////////////////////////////////////////////////////////////////////////////////////
+}
+
+//create update function 
+
+function change(data) {
+
+  var selectValue = d3.select('select').property('value');
+  i = selectValue
+  //update topData
+
+  var remake
+
+  if (topData.length < 20){
+    remake = true
+  }else{
+    remake = false
+  }
+
+  topData = data.sort(function(a, b) {
+    return d3.descending(+a[selectValue], +b[selectValue]);
+  }).slice(0, 20);
+
+
+  // update x and y domain / scale       
+  x
+  .domain([0, d3.max(topData, function(d) { return d[selectValue] ;} )])
+  .call(d3.axisBottom(x));
+    
+  y
+  .domain(topData.map(function(d) { return d.name; }))
+  .call(d3.axisLeft(y));
+    
+
+  // Update x axis label   (y axis remains unchanged)
+  xaxislabel
+  .attr("text-anchor", "end")
+  .text(selectValue);
+  
+  
+  // Update the Y-axis and X-axis
+  yAxis
+  .transition()
+  .duration(1500)
+  .call(d3.axisLeft(y));
+  
+  xAxis
+  .transition()
+  .duration(1500)
+  .call(d3.axisBottom(x))
+  .selectAll("text")
+  .attr("transform", "translate(-10,0)rotate(-20)")
+  .style("text-anchor", "end");
+
+  
+  console.log(d3.event, d3.event.target == d3.select('#label-option')._groups[0][0], d3.select('#label-option')._groups[0][0])
+
+  var event_is_select = d3.event.target == d3.select('#label-option')._groups[0][0]
+
+  if (remake & event_is_select == false){
+    var bar = svg.selectAll('.bar')
+    bar.remove()
+
+    svg.selectAll(".bar")
+        .data(topData)
+        .enter()
+        .append("rect")
+        .attr("class", "bar")
+        .attr("x",  function(d) {return  x(0);})
+        .attr("y", function(d) { return y(d.name); })
+        .attr("width",function(d){return x(0);} )
+        .attr("height", 15)
+        .on("mouseover", mouseover)
+        .on("mouseout", mouseout);
+
+    svg.selectAll(".bar")
+      .transition()
+      .duration(500)
+      .attr("width",function(d) { return  x(d[i]);}  )
+      .attr("y", function(d) { return y(d.name); })
+      .attr("height", 15)
+      .attr("fill", function(d) {
+      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});
+
+  }else{
+    var bar = svg.selectAll('.bar').data(topData);
+    bar.exit().remove(); 
+    // Update data:
+    bar
+    .transition()
+    .duration(500)
+    .attr("x",  function(d) {return  x(0);})
+    .attr("y", function(d) { return y(d.name); })
+    .attr("width",function(d){return x(0);} )
+    .attr("width",function(d) { return  x(d[selectValue]);}  )
+    .attr("height", 15)
+    .attr("fill", function(d) {
+      return "rgb(200, 80, " + (y(d.name)/2 ) + ")"});
+  }
+
+  // add label next to bar
+
+  var textlabel = svg.selectAll(".label-top10").data(topData)
+  textlabel.exit().remove()
+
+  textlabel.transition().duration(300)
+    .attr("x", d => x(d[i]) - 4)
+    .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
+    .text(d => format(d[i]));
+
+}
+
+module.exports.top10 = top10; 
+module.exports.change = change; 
+
+// export default {top10, change};
+  
+
+  
+       
+
+},{"d3":37}],4:[function(require,module,exports){
+var d3 = require("d3"),
+    cloud = require("d3-cloud");
+
+function wordcloud(data){
+  var wordsMap = {};
+  var words = [];
+
+  data.map(function(d){
+    d.text.map(word => {
+      if (wordsMap.hasOwnProperty(word)) {
+        wordsMap[word]++;
+      } else {
+        wordsMap[word] = 1;
+      }
+    }) 
+  })
+  for (const [key, value] of Object.entries(wordsMap)) {
+    words.push({text: key, size: 5 + wordsMap[key]})
+  }
+
+  words = words.sort(function(a, b){
+    return b.size - a.size
+  })
+
+  var layout = cloud()
+    .size([900, 500])
+    .words(words.slice(0, 100))
+    .padding(5)
+    .font("Impact")
+    .rotate(function() { return ~~(Math.random() * 2) * 45; })
+    .fontSize(function(d) { return d.size; })
+    .on("end", draw);
+
+  layout.start();
+
+  function draw(words) {
+    d3.select("#wordcloud").append("svg")
+        .attr("width", layout.size()[0])
+        .attr("height", layout.size()[1])
+      .append("g")
+        .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
+      .selectAll("text")
+        .data(words)
+      .enter().append("text")
+        .style("font-size", function(d) { return d.size + "px"; })
+        .style("font-family", "Impact")
+        .attr("text-anchor", "middle")
+        .attr("transform", function(d) {
+          return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+        })
+        .text(function(d) { return d.text; });
+    };
+}
+
+  function change(data){
+    d3.select("#wordcloud").selectAll("svg > *").remove();
+    wordcloud(data)
+  }
+
+module.exports.wordcloud = wordcloud;
+module.exports.change = change;
+
+},{"d3":37,"d3-cloud":9}],5:[function(require,module,exports){
+// https://d3js.org/d3-array/ v1.2.4 Copyright 2018 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(factory((global.d3 = global.d3 || {})));
+}(this, (function (exports) { 'use strict';
+
+function ascending(a, b) {
+  return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
+}
+
+function bisector(compare) {
+  if (compare.length === 1) compare = ascendingComparator(compare);
+  return {
+    left: function(a, x, lo, hi) {
+      if (lo == null) lo = 0;
+      if (hi == null) hi = a.length;
+      while (lo < hi) {
+        var mid = lo + hi >>> 1;
+        if (compare(a[mid], x) < 0) lo = mid + 1;
+        else hi = mid;
+      }
+      return lo;
+    },
+    right: function(a, x, lo, hi) {
+      if (lo == null) lo = 0;
+      if (hi == null) hi = a.length;
+      while (lo < hi) {
+        var mid = lo + hi >>> 1;
+        if (compare(a[mid], x) > 0) hi = mid;
+        else lo = mid + 1;
+      }
+      return lo;
+    }
+  };
+}
+
+function ascendingComparator(f) {
+  return function(d, x) {
+    return ascending(f(d), x);
+  };
+}
+
+var ascendingBisect = bisector(ascending);
+var bisectRight = ascendingBisect.right;
+var bisectLeft = ascendingBisect.left;
+
+function pairs(array, f) {
+  if (f == null) f = pair;
+  var i = 0, n = array.length - 1, p = array[0], pairs = new Array(n < 0 ? 0 : n);
+  while (i < n) pairs[i] = f(p, p = array[++i]);
+  return pairs;
+}
+
+function pair(a, b) {
+  return [a, b];
+}
+
+function cross(values0, values1, reduce) {
+  var n0 = values0.length,
+      n1 = values1.length,
+      values = new Array(n0 * n1),
+      i0,
+      i1,
+      i,
+      value0;
+
+  if (reduce == null) reduce = pair;
+
+  for (i0 = i = 0; i0 < n0; ++i0) {
+    for (value0 = values0[i0], i1 = 0; i1 < n1; ++i1, ++i) {
+      values[i] = reduce(value0, values1[i1]);
+    }
+  }
+
+  return values;
+}
+
+function descending(a, b) {
+  return b < a ? -1 : b > a ? 1 : b >= a ? 0 : NaN;
+}
+
+function number(x) {
+  return x === null ? NaN : +x;
+}
+
+function variance(values, valueof) {
+  var n = values.length,
+      m = 0,
+      i = -1,
+      mean = 0,
+      value,
+      delta,
+      sum = 0;
+
+  if (valueof == null) {
+    while (++i < n) {
+      if (!isNaN(value = number(values[i]))) {
+        delta = value - mean;
+        mean += delta / ++m;
+        sum += delta * (value - mean);
+      }
+    }
+  }
+
+  else {
+    while (++i < n) {
+      if (!isNaN(value = number(valueof(values[i], i, values)))) {
+        delta = value - mean;
+        mean += delta / ++m;
+        sum += delta * (value - mean);
+      }
+    }
+  }
+
+  if (m > 1) return sum / (m - 1);
+}
+
+function deviation(array, f) {
+  var v = variance(array, f);
+  return v ? Math.sqrt(v) : v;
+}
+
+function extent(values, valueof) {
+  var n = values.length,
+      i = -1,
+      value,
+      min,
+      max;
+
+  if (valueof == null) {
+    while (++i < n) { // Find the first comparable value.
+      if ((value = values[i]) != null && value >= value) {
+        min = max = value;
+        while (++i < n) { // Compare the remaining values.
+          if ((value = values[i]) != null) {
+            if (min > value) min = value;
+            if (max < value) max = value;
+          }
+        }
+      }
+    }
+  }
+
+  else {
+    while (++i < n) { // Find the first comparable value.
+      if ((value = valueof(values[i], i, values)) != null && value >= value) {
+        min = max = value;
+        while (++i < n) { // Compare the remaining values.
+          if ((value = valueof(values[i], i, values)) != null) {
+            if (min > value) min = value;
+            if (max < value) max = value;
+          }
+        }
+      }
+    }
+  }
+
+  return [min, max];
+}
+
+var array = Array.prototype;
+
+var slice = array.slice;
+var map = array.map;
+
+function constant(x) {
+  return function() {
+    return x;
+  };
+}
+
+function identity(x) {
+  return x;
+}
+
+function range(start, stop, step) {
+  start = +start, stop = +stop, step = (n = arguments.length) < 2 ? (stop = start, start = 0, 1) : n < 3 ? 1 : +step;
+
+  var i = -1,
+      n = Math.max(0, Math.ceil((stop - start) / step)) | 0,
+      range = new Array(n);
+
+  while (++i < n) {
+    range[i] = start + i * step;
+  }
+
+  return range;
+}
+
+var e10 = Math.sqrt(50),
+    e5 = Math.sqrt(10),
+    e2 = Math.sqrt(2);
+
+function ticks(start, stop, count) {
+  var reverse,
+      i = -1,
+      n,
+      ticks,
+      step;
+
+  stop = +stop, start = +start, count = +count;
+  if (start === stop && count > 0) return [start];
+  if (reverse = stop < start) n = start, start = stop, stop = n;
+  if ((step = tickIncrement(start, stop, count)) === 0 || !isFinite(step)) return [];
+
+  if (step > 0) {
+    start = Math.ceil(start / step);
+    stop = Math.floor(stop / step);
+    ticks = new Array(n = Math.ceil(stop - start + 1));
+    while (++i < n) ticks[i] = (start + i) * step;
+  } else {
+    start = Math.floor(start * step);
+    stop = Math.ceil(stop * step);
+    ticks = new Array(n = Math.ceil(start - stop + 1));
+    while (++i < n) ticks[i] = (start - i) / step;
+  }
+
+  if (reverse) ticks.reverse();
+
+  return ticks;
+}
+
+function tickIncrement(start, stop, count) {
+  var step = (stop - start) / Math.max(0, count),
+      power = Math.floor(Math.log(step) / Math.LN10),
+      error = step / Math.pow(10, power);
+  return power >= 0
+      ? (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1) * Math.pow(10, power)
+      : -Math.pow(10, -power) / (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1);
+}
+
+function tickStep(start, stop, count) {
+  var step0 = Math.abs(stop - start) / Math.max(0, count),
+      step1 = Math.pow(10, Math.floor(Math.log(step0) / Math.LN10)),
+      error = step0 / step1;
+  if (error >= e10) step1 *= 10;
+  else if (error >= e5) step1 *= 5;
+  else if (error >= e2) step1 *= 2;
+  return stop < start ? -step1 : step1;
+}
+
+function sturges(values) {
+  return Math.ceil(Math.log(values.length) / Math.LN2) + 1;
+}
+
+function histogram() {
+  var value = identity,
+      domain = extent,
+      threshold = sturges;
+
+  function histogram(data) {
+    var i,
+        n = data.length,
+        x,
+        values = new Array(n);
+
+    for (i = 0; i < n; ++i) {
+      values[i] = value(data[i], i, data);
+    }
+
+    var xz = domain(values),
+        x0 = xz[0],
+        x1 = xz[1],
+        tz = threshold(values, x0, x1);
+
+    // Convert number of thresholds into uniform thresholds.
+    if (!Array.isArray(tz)) {
+      tz = tickStep(x0, x1, tz);
+      tz = range(Math.ceil(x0 / tz) * tz, x1, tz); // exclusive
+    }
+
+    // Remove any thresholds outside the domain.
+    var m = tz.length;
+    while (tz[0] <= x0) tz.shift(), --m;
+    while (tz[m - 1] > x1) tz.pop(), --m;
+
+    var bins = new Array(m + 1),
+        bin;
+
+    // Initialize bins.
+    for (i = 0; i <= m; ++i) {
+      bin = bins[i] = [];
+      bin.x0 = i > 0 ? tz[i - 1] : x0;
+      bin.x1 = i < m ? tz[i] : x1;
+    }
+
+    // Assign data to bins by value, ignoring any outside the domain.
+    for (i = 0; i < n; ++i) {
+      x = values[i];
+      if (x0 <= x && x <= x1) {
+        bins[bisectRight(tz, x, 0, m)].push(data[i]);
+      }
+    }
+
+    return bins;
+  }
+
+  histogram.value = function(_) {
+    return arguments.length ? (value = typeof _ === "function" ? _ : constant(_), histogram) : value;
+  };
+
+  histogram.domain = function(_) {
+    return arguments.length ? (domain = typeof _ === "function" ? _ : constant([_[0], _[1]]), histogram) : domain;
+  };
+
+  histogram.thresholds = function(_) {
+    return arguments.length ? (threshold = typeof _ === "function" ? _ : Array.isArray(_) ? constant(slice.call(_)) : constant(_), histogram) : threshold;
+  };
+
+  return histogram;
+}
+
+function quantile(values, p, valueof) {
+  if (valueof == null) valueof = number;
+  if (!(n = values.length)) return;
+  if ((p = +p) <= 0 || n < 2) return +valueof(values[0], 0, values);
+  if (p >= 1) return +valueof(values[n - 1], n - 1, values);
+  var n,
+      i = (n - 1) * p,
+      i0 = Math.floor(i),
+      value0 = +valueof(values[i0], i0, values),
+      value1 = +valueof(values[i0 + 1], i0 + 1, values);
+  return value0 + (value1 - value0) * (i - i0);
+}
+
+function freedmanDiaconis(values, min, max) {
+  values = map.call(values, number).sort(ascending);
+  return Math.ceil((max - min) / (2 * (quantile(values, 0.75) - quantile(values, 0.25)) * Math.pow(values.length, -1 / 3)));
+}
+
+function scott(values, min, max) {
+  return Math.ceil((max - min) / (3.5 * deviation(values) * Math.pow(values.length, -1 / 3)));
+}
+
+function max(values, valueof) {
+  var n = values.length,
+      i = -1,
+      value,
+      max;
+
+  if (valueof == null) {
+    while (++i < n) { // Find the first comparable value.
+      if ((value = values[i]) != null && value >= value) {
+        max = value;
+        while (++i < n) { // Compare the remaining values.
+          if ((value = values[i]) != null && value > max) {
+            max = value;
+          }
+        }
+      }
+    }
+  }
+
+  else {
+    while (++i < n) { // Find the first comparable value.
+      if ((value = valueof(values[i], i, values)) != null && value >= value) {
+        max = value;
+        while (++i < n) { // Compare the remaining values.
+          if ((value = valueof(values[i], i, values)) != null && value > max) {
+            max = value;
+          }
+        }
+      }
+    }
+  }
+
+  return max;
+}
+
+function mean(values, valueof) {
+  var n = values.length,
+      m = n,
+      i = -1,
+      value,
+      sum = 0;
+
+  if (valueof == null) {
+    while (++i < n) {
+      if (!isNaN(value = number(values[i]))) sum += value;
+      else --m;
+    }
+  }
+
+  else {
+    while (++i < n) {
+      if (!isNaN(value = number(valueof(values[i], i, values)))) sum += value;
+      else --m;
+    }
+  }
+
+  if (m) return sum / m;
+}
+
+function median(values, valueof) {
+  var n = values.length,
+      i = -1,
+      value,
+      numbers = [];
+
+  if (valueof == null) {
+    while (++i < n) {
+      if (!isNaN(value = number(values[i]))) {
+        numbers.push(value);
+      }
+    }
+  }
+
+  else {
+    while (++i < n) {
+      if (!isNaN(value = number(valueof(values[i], i, values)))) {
+        numbers.push(value);
+      }
+    }
+  }
+
+  return quantile(numbers.sort(ascending), 0.5);
+}
+
+function merge(arrays) {
+  var n = arrays.length,
+      m,
+      i = -1,
+      j = 0,
+      merged,
+      array;
+
+  while (++i < n) j += arrays[i].length;
+  merged = new Array(j);
+
+  while (--n >= 0) {
+    array = arrays[n];
+    m = array.length;
+    while (--m >= 0) {
+      merged[--j] = array[m];
+    }
+  }
+
+  return merged;
+}
+
+function min(values, valueof) {
+  var n = values.length,
+      i = -1,
+      value,
+      min;
+
+  if (valueof == null) {
+    while (++i < n) { // Find the first comparable value.
+      if ((value = values[i]) != null && value >= value) {
+        min = value;
+        while (++i < n) { // Compare the remaining values.
+          if ((value = values[i]) != null && min > value) {
+            min = value;
+          }
+        }
+      }
+    }
+  }
+
+  else {
+    while (++i < n) { // Find the first comparable value.
+      if ((value = valueof(values[i], i, values)) != null && value >= value) {
+        min = value;
+        while (++i < n) { // Compare the remaining values.
+          if ((value = valueof(values[i], i, values)) != null && min > value) {
+            min = value;
+          }
+        }
+      }
+    }
+  }
+
+  return min;
+}
+
+function permute(array, indexes) {
+  var i = indexes.length, permutes = new Array(i);
+  while (i--) permutes[i] = array[indexes[i]];
+  return permutes;
+}
+
+function scan(values, compare) {
+  if (!(n = values.length)) return;
+  var n,
+      i = 0,
+      j = 0,
+      xi,
+      xj = values[j];
+
+  if (compare == null) compare = ascending;
+
+  while (++i < n) {
+    if (compare(xi = values[i], xj) < 0 || compare(xj, xj) !== 0) {
+      xj = xi, j = i;
+    }
+  }
+
+  if (compare(xj, xj) === 0) return j;
+}
+
+function shuffle(array, i0, i1) {
+  var m = (i1 == null ? array.length : i1) - (i0 = i0 == null ? 0 : +i0),
+      t,
+      i;
+
+  while (m) {
+    i = Math.random() * m-- | 0;
+    t = array[m + i0];
+    array[m + i0] = array[i + i0];
+    array[i + i0] = t;
+  }
+
+  return array;
+}
+
+function sum(values, valueof) {
+  var n = values.length,
+      i = -1,
+      value,
+      sum = 0;
+
+  if (valueof == null) {
+    while (++i < n) {
+      if (value = +values[i]) sum += value; // Note: zero and null are equivalent.
+    }
+  }
+
+  else {
+    while (++i < n) {
+      if (value = +valueof(values[i], i, values)) sum += value;
+    }
+  }
+
+  return sum;
+}
+
+function transpose(matrix) {
+  if (!(n = matrix.length)) return [];
+  for (var i = -1, m = min(matrix, length), transpose = new Array(m); ++i < m;) {
+    for (var j = -1, n, row = transpose[i] = new Array(n); ++j < n;) {
+      row[j] = matrix[j][i];
+    }
+  }
+  return transpose;
+}
+
+function length(d) {
+  return d.length;
+}
+
+function zip() {
+  return transpose(arguments);
+}
+
+exports.bisect = bisectRight;
+exports.bisectRight = bisectRight;
+exports.bisectLeft = bisectLeft;
+exports.ascending = ascending;
+exports.bisector = bisector;
+exports.cross = cross;
+exports.descending = descending;
+exports.deviation = deviation;
+exports.extent = extent;
+exports.histogram = histogram;
+exports.thresholdFreedmanDiaconis = freedmanDiaconis;
+exports.thresholdScott = scott;
+exports.thresholdSturges = sturges;
+exports.max = max;
+exports.mean = mean;
+exports.median = median;
+exports.merge = merge;
+exports.min = min;
+exports.pairs = pairs;
+exports.permute = permute;
+exports.quantile = quantile;
+exports.range = range;
+exports.scan = scan;
+exports.shuffle = shuffle;
+exports.sum = sum;
+exports.ticks = ticks;
+exports.tickIncrement = tickIncrement;
+exports.tickStep = tickStep;
+exports.transpose = transpose;
+exports.variance = variance;
+exports.zip = zip;
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+})));
+
+},{}],6:[function(require,module,exports){
+// https://d3js.org/d3-axis/ v1.0.12 Copyright 2018 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(factory((global.d3 = global.d3 || {})));
+}(this, (function (exports) { 'use strict';
+
+var slice = Array.prototype.slice;
+
+function identity(x) {
+  return x;
+}
+
+var top = 1,
+    right = 2,
+    bottom = 3,
+    left = 4,
+    epsilon = 1e-6;
+
+function translateX(x) {
+  return "translate(" + (x + 0.5) + ",0)";
+}
+
+function translateY(y) {
+  return "translate(0," + (y + 0.5) + ")";
+}
+
+function number(scale) {
+  return function(d) {
+    return +scale(d);
+  };
+}
+
+function center(scale) {
+  var offset = Math.max(0, scale.bandwidth() - 1) / 2; // Adjust for 0.5px offset.
+  if (scale.round()) offset = Math.round(offset);
+  return function(d) {
+    return +scale(d) + offset;
+  };
+}
+
+function entering() {
+  return !this.__axis;
+}
+
+function axis(orient, scale) {
+  var tickArguments = [],
+      tickValues = null,
+      tickFormat = null,
+      tickSizeInner = 6,
+      tickSizeOuter = 6,
+      tickPadding = 3,
+      k = orient === top || orient === left ? -1 : 1,
+      x = orient === left || orient === right ? "x" : "y",
+      transform = orient === top || orient === bottom ? translateX : translateY;
+
+  function axis(context) {
+    var values = tickValues == null ? (scale.ticks ? scale.ticks.apply(scale, tickArguments) : scale.domain()) : tickValues,
+        format = tickFormat == null ? (scale.tickFormat ? scale.tickFormat.apply(scale, tickArguments) : identity) : tickFormat,
+        spacing = Math.max(tickSizeInner, 0) + tickPadding,
+        range = scale.range(),
+        range0 = +range[0] + 0.5,
+        range1 = +range[range.length - 1] + 0.5,
+        position = (scale.bandwidth ? center : number)(scale.copy()),
+        selection = context.selection ? context.selection() : context,
+        path = selection.selectAll(".domain").data([null]),
+        tick = selection.selectAll(".tick").data(values, scale).order(),
+        tickExit = tick.exit(),
+        tickEnter = tick.enter().append("g").attr("class", "tick"),
+        line = tick.select("line"),
+        text = tick.select("text");
+
+    path = path.merge(path.enter().insert("path", ".tick")
+        .attr("class", "domain")
+        .attr("stroke", "currentColor"));
+
+    tick = tick.merge(tickEnter);
+
+    line = line.merge(tickEnter.append("line")
+        .attr("stroke", "currentColor")
+        .attr(x + "2", k * tickSizeInner));
+
+    text = text.merge(tickEnter.append("text")
+        .attr("fill", "currentColor")
+        .attr(x, k * spacing)
+        .attr("dy", orient === top ? "0em" : orient === bottom ? "0.71em" : "0.32em"));
+
+    if (context !== selection) {
+      path = path.transition(context);
+      tick = tick.transition(context);
+      line = line.transition(context);
+      text = text.transition(context);
+
+      tickExit = tickExit.transition(context)
+          .attr("opacity", epsilon)
+          .attr("transform", function(d) { return isFinite(d = position(d)) ? transform(d) : this.getAttribute("transform"); });
+
+      tickEnter
+          .attr("opacity", epsilon)
+          .attr("transform", function(d) { var p = this.parentNode.__axis; return transform(p && isFinite(p = p(d)) ? p : position(d)); });
+    }
+
+    tickExit.remove();
+
+    path
+        .attr("d", orient === left || orient == right
+            ? (tickSizeOuter ? "M" + k * tickSizeOuter + "," + range0 + "H0.5V" + range1 + "H" + k * tickSizeOuter : "M0.5," + range0 + "V" + range1)
+            : (tickSizeOuter ? "M" + range0 + "," + k * tickSizeOuter + "V0.5H" + range1 + "V" + k * tickSizeOuter : "M" + range0 + ",0.5H" + range1));
+
+    tick
+        .attr("opacity", 1)
+        .attr("transform", function(d) { return transform(position(d)); });
+
+    line
+        .attr(x + "2", k * tickSizeInner);
+
+    text
+        .attr(x, k * spacing)
+        .text(format);
+
+    selection.filter(entering)
+        .attr("fill", "none")
+        .attr("font-size", 10)
+        .attr("font-family", "sans-serif")
+        .attr("text-anchor", orient === right ? "start" : orient === left ? "end" : "middle");
+
+    selection
+        .each(function() { this.__axis = position; });
+  }
+
+  axis.scale = function(_) {
+    return arguments.length ? (scale = _, axis) : scale;
+  };
+
+  axis.ticks = function() {
+    return tickArguments = slice.call(arguments), axis;
+  };
+
+  axis.tickArguments = function(_) {
+    return arguments.length ? (tickArguments = _ == null ? [] : slice.call(_), axis) : tickArguments.slice();
+  };
+
+  axis.tickValues = function(_) {
+    return arguments.length ? (tickValues = _ == null ? null : slice.call(_), axis) : tickValues && tickValues.slice();
+  };
+
+  axis.tickFormat = function(_) {
+    return arguments.length ? (tickFormat = _, axis) : tickFormat;
+  };
+
+  axis.tickSize = function(_) {
+    return arguments.length ? (tickSizeInner = tickSizeOuter = +_, axis) : tickSizeInner;
+  };
+
+  axis.tickSizeInner = function(_) {
+    return arguments.length ? (tickSizeInner = +_, axis) : tickSizeInner;
+  };
+
+  axis.tickSizeOuter = function(_) {
+    return arguments.length ? (tickSizeOuter = +_, axis) : tickSizeOuter;
+  };
+
+  axis.tickPadding = function(_) {
+    return arguments.length ? (tickPadding = +_, axis) : tickPadding;
+  };
+
+  return axis;
+}
+
+function axisTop(scale) {
+  return axis(top, scale);
+}
+
+function axisRight(scale) {
+  return axis(right, scale);
+}
+
+function axisBottom(scale) {
+  return axis(bottom, scale);
+}
+
+function axisLeft(scale) {
+  return axis(left, scale);
+}
+
+exports.axisTop = axisTop;
+exports.axisRight = axisRight;
+exports.axisBottom = axisBottom;
+exports.axisLeft = axisLeft;
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+})));
+
+},{}],7:[function(require,module,exports){
+// https://d3js.org/d3-brush/ v1.1.5 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dispatch'), require('d3-drag'), require('d3-interpolate'), require('d3-selection'), require('d3-transition')) :
+typeof define === 'function' && define.amd ? define(['exports', 'd3-dispatch', 'd3-drag', 'd3-interpolate', 'd3-selection', 'd3-transition'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}, global.d3, global.d3, global.d3, global.d3, global.d3));
+}(this, function (exports, d3Dispatch, d3Drag, d3Interpolate, d3Selection, d3Transition) { 'use strict';
+
+function constant(x) {
+  return function() {
+    return x;
+  };
+}
+
+function BrushEvent(target, type, selection) {
+  this.target = target;
+  this.type = type;
+  this.selection = selection;
+}
+
+function nopropagation() {
+  d3Selection.event.stopImmediatePropagation();
+}
+>>>>>>> integrate-wordcloud
 
     color_scale = d3.scaleLog()
         .domain([1, country_max])
@@ -2105,6 +3303,7 @@ function top10(data){
     x.domain([0, d3.max(topData, function(d) { return d[i] ;} )]);
     y.domain(topData.map(function(d) { return d.name; }));
 
+<<<<<<< HEAD
     
     //initiate X axis
     xAxis
@@ -2112,6 +3311,39 @@ function top10(data){
     .selectAll("text")
     .attr("transform", "translate(-10,0)rotate(-20)")
     .style("text-anchor", "end");
+=======
+}));
+
+},{"d3-dispatch":13,"d3-drag":14,"d3-interpolate":22,"d3-selection":29,"d3-transition":34}],8:[function(require,module,exports){
+// https://d3js.org/d3-chord/ v1.0.6 Copyright 2018 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-array'), require('d3-path')) :
+typeof define === 'function' && define.amd ? define(['exports', 'd3-array', 'd3-path'], factory) :
+(factory((global.d3 = global.d3 || {}),global.d3,global.d3));
+}(this, (function (exports,d3Array,d3Path) { 'use strict';
+
+var cos = Math.cos;
+var sin = Math.sin;
+var pi = Math.PI;
+var halfPi = pi / 2;
+var tau = pi * 2;
+var max = Math.max;
+
+function compareValue(compare) {
+  return function(a, b) {
+    return compare(
+      a.source.value + a.target.value,
+      b.source.value + b.target.value
+    );
+  };
+}
+
+function chord() {
+  var padAngle = 0,
+      sortGroups = null,
+      sortSubgroups = null,
+      sortChords = null;
+>>>>>>> integrate-wordcloud
 
     //initiate Y axis
     yAxis
@@ -2284,10 +3516,18 @@ module.exports.change = change;
   
        
 
+<<<<<<< HEAD
 },{"d3":45}],6:[function(require,module,exports){
 var words = [];
 var layout;
 var wordsMap = {};
+=======
+},{"d3-array":5,"d3-path":23}],9:[function(require,module,exports){
+(function (global){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g=(g.d3||(g.d3 = {}));g=(g.layout||(g.layout = {}));g.cloud = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+// Word cloud layout by Jason Davies, https://www.jasondavies.com/wordcloud/
+// Algorithm due to Jonathan Feinberg, http://static.mrfeinberg.com/bv_ch03.pdf
+>>>>>>> integrate-wordcloud
 
 var d3 = require("d3"),
     cloud = require("d3-cloud");
@@ -2727,6 +3967,7 @@ function ticks(start, stop, count) {
   return ticks;
 }
 
+<<<<<<< HEAD
 function tickIncrement(start, stop, count) {
   var step = (stop - start) / Math.max(0, count),
       power = Math.floor(Math.log(step) / Math.LN10),
@@ -2735,6 +3976,26 @@ function tickIncrement(start, stop, count) {
       ? (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1) * Math.pow(10, power)
       : -Math.pow(10, -power) / (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1);
 }
+=======
+exports.dispatch = dispatch;
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+})));
+
+},{}]},{},[1])(1)
+});
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"d3-dispatch":13}],10:[function(require,module,exports){
+// https://d3js.org/d3-collection/ v1.0.7 Copyright 2018 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(factory((global.d3 = global.d3 || {})));
+}(this, (function (exports) { 'use strict';
+
+var prefix = "$";
+>>>>>>> integrate-wordcloud
 
 function tickStep(start, stop, count) {
   var step0 = Math.abs(stop - start) / Math.max(0, count),
@@ -2971,8 +4232,18 @@ function merge(arrays) {
     }
   }
 
+<<<<<<< HEAD
   return merged;
 }
+=======
+},{}],11:[function(require,module,exports){
+// https://d3js.org/d3-color/ v1.4.1 Copyright 2020 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}));
+}(this, function (exports) { 'use strict';
+>>>>>>> integrate-wordcloud
 
 >>>>>>> 28e85b5a5276ff671af6daa679f73bada41c9a8f
 function min(values, valueof) {
@@ -3316,7 +4587,17 @@ function axis(orient, scale) {
           .attr("transform", function(d) { var p = this.parentNode.__axis; return transform(p && isFinite(p = p(d)) ? p : position(d)); });
     }
 
+<<<<<<< HEAD
     tickExit.remove();
+=======
+},{}],12:[function(require,module,exports){
+// https://d3js.org/d3-contour/ v1.3.2 Copyright 2018 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-array')) :
+typeof define === 'function' && define.amd ? define(['exports', 'd3-array'], factory) :
+(factory((global.d3 = global.d3 || {}),global.d3));
+}(this, (function (exports,d3Array) { 'use strict';
+>>>>>>> integrate-wordcloud
 
     path
         .attr("d", orient === left || orient == right
@@ -3610,9 +4891,31 @@ function toucher(identifier) {
     return arguments.length ? (tickSizeOuter = +_, axis) : tickSizeOuter;
   };
 
+<<<<<<< HEAD
   axis.tickPadding = function(_) {
     return arguments.length ? (tickPadding = +_, axis) : tickPadding;
   };
+=======
+  return density;
+}
+
+exports.contours = contours;
+exports.contourDensity = density;
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+})));
+
+},{"d3-array":5}],13:[function(require,module,exports){
+// https://d3js.org/d3-dispatch/ v1.0.6 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}));
+}(this, function (exports) { 'use strict';
+
+var noop = {value: function() {}};
+>>>>>>> integrate-wordcloud
 
   return axis;
 }
@@ -3642,8 +4945,13 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
+<<<<<<< HEAD
 },{}],8:[function(require,module,exports){
 // https://d3js.org/d3-brush/ v1.1.5 Copyright 2019 Mike Bostock
+=======
+},{}],14:[function(require,module,exports){
+// https://d3js.org/d3-drag/ v1.2.5 Copyright 2019 Mike Bostock
+>>>>>>> integrate-wordcloud
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dispatch'), require('d3-drag'), require('d3-interpolate'), require('d3-selection'), require('d3-transition')) :
 typeof define === 'function' && define.amd ? define(['exports', 'd3-dispatch', 'd3-drag', 'd3-interpolate', 'd3-selection', 'd3-transition'], factory) :
@@ -3892,11 +5200,21 @@ function brush$1(dim) {
                 selection1 = dim.input(typeof selection === "function" ? selection.apply(this, arguments) : selection, state.extent),
                 i = d3Interpolate.interpolate(selection0, selection1);
 
+<<<<<<< HEAD
             function tween(t) {
               state.selection = t === 1 && selection1 === null ? null : i(t);
               redraw.call(that);
               emit.brush();
             }
+=======
+},{"d3-dispatch":13,"d3-selection":29}],15:[function(require,module,exports){
+// https://d3js.org/d3-dsv/ v1.2.0 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}));
+}(this, function (exports) { 'use strict';
+>>>>>>> integrate-wordcloud
 
             return selection0 !== null && selection1 !== null ? tween : tween(1);
           });
@@ -4236,9 +5554,19 @@ function brush$1(dim) {
     return arguments.length ? (touchable = typeof _ === "function" ? _ : constant(!!_), brush) : touchable;
   };
 
+<<<<<<< HEAD
   brush.handleSize = function(_) {
     return arguments.length ? (handleSize = +_, brush) : handleSize;
   };
+=======
+},{}],16:[function(require,module,exports){
+// https://d3js.org/d3-ease/ v1.0.6 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}));
+}(this, function (exports) { 'use strict';
+>>>>>>> integrate-wordcloud
 
   brush.keyModifiers = function(_) {
     return arguments.length ? (keys = !!_, brush) : keys;
@@ -4617,10 +5945,20 @@ function brush$1(dim) {
       d3Drag.dragDisable(d3Selection.event.view);
     }
 
+<<<<<<< HEAD
     nopropagation();
     d3Transition.interrupt(that);
     redraw.call(that);
     emit.start();
+=======
+},{}],17:[function(require,module,exports){
+// https://d3js.org/d3-fetch/ v1.1.2 Copyright 2018 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dsv')) :
+typeof define === 'function' && define.amd ? define(['exports', 'd3-dsv'], factory) :
+(factory((global.d3 = global.d3 || {}),global.d3));
+}(this, (function (exports,d3Dsv) { 'use strict';
+>>>>>>> integrate-wordcloud
 
     function moved() {
       var point1 = pointer(that);
@@ -4736,6 +6074,7 @@ function brush$1(dim) {
       noevent();
     }
 
+<<<<<<< HEAD
     function keyupped() {
       switch (d3Selection.event.keyCode) {
         case 16: { // SHIFT
@@ -4775,11 +6114,18 @@ function brush$1(dim) {
       noevent();
     }
   }
+=======
+function responseJson(response) {
+  if (!response.ok) throw new Error(response.status + " " + response.statusText);
+  return response.json();
+}
+>>>>>>> integrate-wordcloud
 
   function touchmoved() {
     emitter(this, arguments).moved();
   }
 
+<<<<<<< HEAD
   function touchended() {
     emitter(this, arguments).ended();
   }
@@ -4793,6 +6139,13 @@ function brush$1(dim) {
 
   brush.extent = function(_) {
     return arguments.length ? (extent = typeof _ === "function" ? _ : constant(number2(_)), brush) : extent;
+=======
+function parser(type) {
+  return function(input, init)  {
+    return text(input, init).then(function(text$$1) {
+      return (new DOMParser).parseFromString(text$$1, type);
+    });
+>>>>>>> integrate-wordcloud
   };
 
   brush.filter = function(_) {
@@ -4807,6 +6160,7 @@ function brush$1(dim) {
     return arguments.length ? (handleSize = +_, brush) : handleSize;
   };
 
+<<<<<<< HEAD
   brush.keyModifiers = function(_) {
     return arguments.length ? (keys = !!_, brush) : keys;
   };
@@ -4823,13 +6177,31 @@ exports.brush = brush;
 exports.brushSelection = brushSelection;
 exports.brushX = brushX;
 exports.brushY = brushY;
+=======
+exports.blob = blob;
+exports.buffer = buffer;
+exports.dsv = dsv;
+exports.csv = csv;
+exports.tsv = tsv;
+exports.image = image;
+exports.json = json;
+exports.text = text;
+exports.xml = xml;
+exports.html = html;
+exports.svg = svg;
+>>>>>>> integrate-wordcloud
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-}));
+})));
 
+<<<<<<< HEAD
 },{"d3-dispatch":15,"d3-drag":16,"d3-interpolate":24,"d3-selection":31,"d3-transition":42}],10:[function(require,module,exports){
 // https://d3js.org/d3-chord/ v1.0.6 Copyright 2018 Mike Bostock
+=======
+},{"d3-dsv":15}],18:[function(require,module,exports){
+// https://d3js.org/d3-force/ v1.2.1 Copyright 2019 Mike Bostock
+>>>>>>> integrate-wordcloud
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-array'), require('d3-path')) :
 typeof define === 'function' && define.amd ? define(['exports', 'd3-array', 'd3-path'], factory) :
@@ -5423,8 +6795,45 @@ function cloudFont() {
   return "serif";
 }
 
+<<<<<<< HEAD
 function cloudFontNormal() {
   return "normal";
+=======
+exports.forceCenter = center;
+exports.forceCollide = collide;
+exports.forceLink = link;
+exports.forceManyBody = manyBody;
+exports.forceRadial = radial;
+exports.forceSimulation = simulation;
+exports.forceX = x$2;
+exports.forceY = y$2;
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+})));
+
+},{"d3-collection":10,"d3-dispatch":13,"d3-quadtree":25,"d3-timer":33}],19:[function(require,module,exports){
+// https://d3js.org/d3-format/ v1.4.4 Copyright 2020 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}));
+}(this, function (exports) { 'use strict';
+
+// Computes the decimal coefficient and exponent of the specified number x with
+// significant digits p, where x is positive and p is in [1, 21] or undefined.
+// For example, formatDecimal(1.23) returns ["123", 0].
+function formatDecimal(x, p) {
+  if ((i = (x = p ? x.toExponential(p - 1) : x.toExponential()).indexOf("e")) < 0) return null; // NaN, ±Infinity
+  var i, coefficient = x.slice(0, i);
+
+  // The string returned by toExponential either has the form \d\.\d+e[-+]\d+
+  // (e.g., 1.2e+3) or the form \de[-+]\d+ (e.g., 1e+3).
+  return [
+    coefficient.length > 1 ? coefficient[0] + coefficient.slice(2) : coefficient,
+    +x.slice(i + 1)
+  ];
+>>>>>>> integrate-wordcloud
 }
 
 function cloudFontSize(d) {
@@ -5848,9 +7257,19 @@ module.exports = function() {
     return false;
   }
 
+<<<<<<< HEAD
   cloud.timeInterval = function(_) {
     return arguments.length ? (timeInterval = _ == null ? Infinity : _, cloud) : timeInterval;
   };
+=======
+},{}],20:[function(require,module,exports){
+// https://d3js.org/d3-geo/ v1.12.1 Copyright 2020 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-array')) :
+typeof define === 'function' && define.amd ? define(['exports', 'd3-array'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}, global.d3));
+}(this, (function (exports, d3Array) { 'use strict';
+>>>>>>> integrate-wordcloud
 
   cloud.words = function(_) {
     return arguments.length ? (words = _, cloud) : words;
@@ -9135,8 +10554,13 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
+<<<<<<< HEAD
 },{}],16:[function(require,module,exports){
 // https://d3js.org/d3-drag/ v1.2.5 Copyright 2019 Mike Bostock
+=======
+},{"d3-array":5}],21:[function(require,module,exports){
+// https://d3js.org/d3-hierarchy/ v1.1.9 Copyright 2019 Mike Bostock
+>>>>>>> integrate-wordcloud
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dispatch'), require('d3-selection')) :
 typeof define === 'function' && define.amd ? define(['exports', 'd3-dispatch', 'd3-selection'], factory) :
@@ -10082,9 +11506,19 @@ function sinOut(t) {
   return Math.sin(t * halfPi);
 }
 
+<<<<<<< HEAD
 function sinInOut(t) {
   return (1 - Math.cos(pi * t)) / 2;
 }
+=======
+},{}],22:[function(require,module,exports){
+// https://d3js.org/d3-interpolate/ v1.4.0 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-color')) :
+typeof define === 'function' && define.amd ? define(['exports', 'd3-color'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}, global.d3));
+}(this, function (exports, d3Color) { 'use strict';
+>>>>>>> integrate-wordcloud
 
 function expIn(t) {
   return Math.pow(2, 10 * t - 10);
@@ -10519,8 +11953,13 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
+<<<<<<< HEAD
 },{}],19:[function(require,module,exports){
 // https://d3js.org/d3-fetch/ v1.2.0 Copyright 2020 Mike Bostock
+=======
+},{"d3-color":11}],23:[function(require,module,exports){
+// https://d3js.org/d3-path/ v1.0.9 Copyright 2019 Mike Bostock
+>>>>>>> integrate-wordcloud
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dsv')) :
 typeof define === 'function' && define.amd ? define(['exports', 'd3-dsv'], factory) :
@@ -10624,8 +12063,13 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 
+<<<<<<< HEAD
 },{"d3-dsv":17}],20:[function(require,module,exports){
 // https://d3js.org/d3-force/ v1.2.1 Copyright 2019 Mike Bostock
+=======
+},{}],24:[function(require,module,exports){
+// https://d3js.org/d3-polygon/ v1.0.6 Copyright 2019 Mike Bostock
+>>>>>>> integrate-wordcloud
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-quadtree'), require('d3-collection'), require('d3-dispatch'), require('d3-timer')) :
 typeof define === 'function' && define.amd ? define(['exports', 'd3-quadtree', 'd3-collection', 'd3-dispatch', 'd3-timer'], factory) :
@@ -10776,9 +12220,29 @@ function collide(radius) {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 function x$1(d) {
   return d.x;
 }
+=======
+exports.polygonArea = area;
+exports.polygonCentroid = centroid;
+exports.polygonContains = contains;
+exports.polygonHull = hull;
+exports.polygonLength = length;
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+}));
+
+},{}],25:[function(require,module,exports){
+// https://d3js.org/d3-quadtree/ v1.0.7 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}));
+}(this, function (exports) { 'use strict';
+>>>>>>> integrate-wordcloud
 
 function y$1(d) {
   return d.y;
@@ -11152,9 +12616,19 @@ function radial(radius, x, y) {
     return arguments.length ? (x = +_, force) : x;
   };
 
+<<<<<<< HEAD
   force.y = function(_) {
     return arguments.length ? (y = +_, force) : y;
   };
+=======
+},{}],26:[function(require,module,exports){
+// https://d3js.org/d3-random/ v1.1.2 Copyright 2018 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(factory((global.d3 = global.d3 || {})));
+}(this, (function (exports) { 'use strict';
+>>>>>>> integrate-wordcloud
 
   return force;
 }
@@ -11256,9 +12730,19 @@ function y$2(y) {
   return force;
 }
 
+<<<<<<< HEAD
 function x$1(d) {
   return d.x;
 }
+=======
+},{}],27:[function(require,module,exports){
+// https://d3js.org/d3-scale-chromatic/ v1.5.0 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-interpolate'), require('d3-color')) :
+typeof define === 'function' && define.amd ? define(['exports', 'd3-interpolate', 'd3-color'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}, global.d3, global.d3));
+}(this, function (exports, d3Interpolate, d3Color) { 'use strict';
+>>>>>>> integrate-wordcloud
 
 function y$1(d) {
   return d.y;
@@ -11736,9 +13220,19 @@ function formatLocale(locale) {
       return numerals(value);
     }
 
+<<<<<<< HEAD
     format.toString = function() {
       return specifier + "";
     };
+=======
+},{"d3-color":11,"d3-interpolate":22}],28:[function(require,module,exports){
+// https://d3js.org/d3-scale/ v2.2.2 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-collection'), require('d3-array'), require('d3-interpolate'), require('d3-format'), require('d3-time'), require('d3-time-format')) :
+typeof define === 'function' && define.amd ? define(['exports', 'd3-collection', 'd3-array', 'd3-interpolate', 'd3-format', 'd3-time', 'd3-time-format'], factory) :
+(factory((global.d3 = global.d3 || {}),global.d3,global.d3,global.d3,global.d3,global.d3,global.d3));
+}(this, (function (exports,d3Collection,d3Array,d3Interpolate,d3Format,d3Time,d3TimeFormat) { 'use strict';
+>>>>>>> integrate-wordcloud
 
     return format;
   }
@@ -13008,6 +14502,7 @@ function centroidRingPointFirst(lambda, phi) {
   centroidPointCartesian(x0, y0, z0);
 }
 
+<<<<<<< HEAD
 function centroidRingPoint(lambda, phi) {
   lambda *= radians, phi *= radians;
   var cosPhi = cos(phi),
@@ -13029,6 +14524,15 @@ function centroidRingPoint(lambda, phi) {
   Z1 += w * (z0 + (z0 = z));
   centroidPointCartesian(x0, y0, z0);
 }
+=======
+},{"d3-array":5,"d3-collection":10,"d3-format":19,"d3-interpolate":22,"d3-time":32,"d3-time-format":31}],29:[function(require,module,exports){
+// https://d3js.org/d3-selection/ v1.4.1 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}));
+}(this, function (exports) { 'use strict';
+>>>>>>> integrate-wordcloud
 
 function centroid(object) {
   W0 = W1 =
@@ -14199,9 +15703,19 @@ function clipCircle(radius) {
       smallRadius = cr > 0,
       notHemisphere = abs(cr) > epsilon; // TODO optimise for this common case
 
+<<<<<<< HEAD
   function interpolate(from, to, direction, stream) {
     circleStream(stream, radius, delta, direction, from, to);
   }
+=======
+},{}],30:[function(require,module,exports){
+// https://d3js.org/d3-shape/ v1.3.7 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-path')) :
+typeof define === 'function' && define.amd ? define(['exports', 'd3-path'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}, global.d3));
+}(this, function (exports, d3Path) { 'use strict';
+>>>>>>> integrate-wordcloud
 
   function visible(lambda, phi) {
     return cos(lambda) * cos(phi) > cr;
@@ -16149,9 +17663,19 @@ function lengthLineStart() {
   lengthStream.lineEnd = lengthLineEnd;
 }
 
+<<<<<<< HEAD
 function lengthLineEnd() {
   lengthStream.point = lengthStream.lineEnd = noop;
 }
+=======
+},{"d3-path":23}],31:[function(require,module,exports){
+// https://d3js.org/d3-time-format/ v2.2.3 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-time')) :
+typeof define === 'function' && define.amd ? define(['exports', 'd3-time'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}, global.d3));
+}(this, function (exports, d3Time) { 'use strict';
+>>>>>>> integrate-wordcloud
 
 function lengthPointFirst(lambda, phi) {
   lambda *= radians, phi *= radians;
@@ -16926,10 +18450,20 @@ function areaRingEnd$1() {
   areaPoint$1(x00, y00);
 }
 
+<<<<<<< HEAD
 var x0$2 = Infinity,
     y0$2 = x0$2,
     x1 = -x0$2,
     y1 = x1;
+=======
+},{"d3-time":32}],32:[function(require,module,exports){
+// https://d3js.org/d3-time/ v1.1.0 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}));
+}(this, function (exports) { 'use strict';
+>>>>>>> integrate-wordcloud
 
 var boundsStream$1 = {
   point: boundsPoint$1,
@@ -17135,6 +18669,7 @@ function PathString() {
   this._string = [];
 }
 
+<<<<<<< HEAD
 PathString.prototype = {
   _radius: 4.5,
   _circle: circle$1(4.5),
@@ -17171,6 +18706,160 @@ PathString.prototype = {
         this._string.push("M", x, ",", y, this._circle);
         break;
       }
+=======
+var utcSundays = utcSunday.range;
+var utcMondays = utcMonday.range;
+var utcTuesdays = utcTuesday.range;
+var utcWednesdays = utcWednesday.range;
+var utcThursdays = utcThursday.range;
+var utcFridays = utcFriday.range;
+var utcSaturdays = utcSaturday.range;
+
+var utcMonth = newInterval(function(date) {
+  date.setUTCDate(1);
+  date.setUTCHours(0, 0, 0, 0);
+}, function(date, step) {
+  date.setUTCMonth(date.getUTCMonth() + step);
+}, function(start, end) {
+  return end.getUTCMonth() - start.getUTCMonth() + (end.getUTCFullYear() - start.getUTCFullYear()) * 12;
+}, function(date) {
+  return date.getUTCMonth();
+});
+var utcMonths = utcMonth.range;
+
+var utcYear = newInterval(function(date) {
+  date.setUTCMonth(0, 1);
+  date.setUTCHours(0, 0, 0, 0);
+}, function(date, step) {
+  date.setUTCFullYear(date.getUTCFullYear() + step);
+}, function(start, end) {
+  return end.getUTCFullYear() - start.getUTCFullYear();
+}, function(date) {
+  return date.getUTCFullYear();
+});
+
+// An optimized implementation for this simple case.
+utcYear.every = function(k) {
+  return !isFinite(k = Math.floor(k)) || !(k > 0) ? null : newInterval(function(date) {
+    date.setUTCFullYear(Math.floor(date.getUTCFullYear() / k) * k);
+    date.setUTCMonth(0, 1);
+    date.setUTCHours(0, 0, 0, 0);
+  }, function(date, step) {
+    date.setUTCFullYear(date.getUTCFullYear() + step * k);
+  });
+};
+var utcYears = utcYear.range;
+
+exports.timeDay = day;
+exports.timeDays = days;
+exports.timeFriday = friday;
+exports.timeFridays = fridays;
+exports.timeHour = hour;
+exports.timeHours = hours;
+exports.timeInterval = newInterval;
+exports.timeMillisecond = millisecond;
+exports.timeMilliseconds = milliseconds;
+exports.timeMinute = minute;
+exports.timeMinutes = minutes;
+exports.timeMonday = monday;
+exports.timeMondays = mondays;
+exports.timeMonth = month;
+exports.timeMonths = months;
+exports.timeSaturday = saturday;
+exports.timeSaturdays = saturdays;
+exports.timeSecond = second;
+exports.timeSeconds = seconds;
+exports.timeSunday = sunday;
+exports.timeSundays = sundays;
+exports.timeThursday = thursday;
+exports.timeThursdays = thursdays;
+exports.timeTuesday = tuesday;
+exports.timeTuesdays = tuesdays;
+exports.timeWednesday = wednesday;
+exports.timeWednesdays = wednesdays;
+exports.timeWeek = sunday;
+exports.timeWeeks = sundays;
+exports.timeYear = year;
+exports.timeYears = years;
+exports.utcDay = utcDay;
+exports.utcDays = utcDays;
+exports.utcFriday = utcFriday;
+exports.utcFridays = utcFridays;
+exports.utcHour = utcHour;
+exports.utcHours = utcHours;
+exports.utcMillisecond = millisecond;
+exports.utcMilliseconds = milliseconds;
+exports.utcMinute = utcMinute;
+exports.utcMinutes = utcMinutes;
+exports.utcMonday = utcMonday;
+exports.utcMondays = utcMondays;
+exports.utcMonth = utcMonth;
+exports.utcMonths = utcMonths;
+exports.utcSaturday = utcSaturday;
+exports.utcSaturdays = utcSaturdays;
+exports.utcSecond = second;
+exports.utcSeconds = seconds;
+exports.utcSunday = utcSunday;
+exports.utcSundays = utcSundays;
+exports.utcThursday = utcThursday;
+exports.utcThursdays = utcThursdays;
+exports.utcTuesday = utcTuesday;
+exports.utcTuesdays = utcTuesdays;
+exports.utcWednesday = utcWednesday;
+exports.utcWednesdays = utcWednesdays;
+exports.utcWeek = utcSunday;
+exports.utcWeeks = utcSundays;
+exports.utcYear = utcYear;
+exports.utcYears = utcYears;
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+}));
+
+},{}],33:[function(require,module,exports){
+// https://d3js.org/d3-timer/ v1.0.10 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}));
+}(this, function (exports) { 'use strict';
+
+var frame = 0, // is an animation frame pending?
+    timeout = 0, // is a timeout pending?
+    interval = 0, // are any timers active?
+    pokeDelay = 1000, // how frequently we check for clock skew
+    taskHead,
+    taskTail,
+    clockLast = 0,
+    clockNow = 0,
+    clockSkew = 0,
+    clock = typeof performance === "object" && performance.now ? performance : Date,
+    setFrame = typeof window === "object" && window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function(f) { setTimeout(f, 17); };
+
+function now() {
+  return clockNow || (setFrame(clearNow), clockNow = clock.now() + clockSkew);
+}
+
+function clearNow() {
+  clockNow = 0;
+}
+
+function Timer() {
+  this._call =
+  this._time =
+  this._next = null;
+}
+
+Timer.prototype = timer.prototype = {
+  constructor: Timer,
+  restart: function(callback, delay, time) {
+    if (typeof callback !== "function") throw new TypeError("callback is not a function");
+    time = (time == null ? now() : +time) + (delay == null ? 0 : +delay);
+    if (!this._next && taskTail !== this) {
+      if (taskTail) taskTail._next = this;
+      else taskHead = this;
+      taskTail = this;
+>>>>>>> integrate-wordcloud
     }
   },
   result: function() {
@@ -17251,6 +18940,7 @@ function albersUsa() {
         || (hawaiiPoint.point(x, y), point);
   }
 
+<<<<<<< HEAD
   albersUsa.invert = function(coordinates) {
     var k = lower48.scale(),
         t = lower48.translate(),
@@ -17260,6 +18950,15 @@ function albersUsa() {
         : y >= 0.166 && y < 0.234 && x >= -0.214 && x < -0.115 ? hawaii
         : lower48).invert(coordinates);
   };
+=======
+},{}],34:[function(require,module,exports){
+// https://d3js.org/d3-transition/ v1.3.2 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-selection'), require('d3-dispatch'), require('d3-timer'), require('d3-interpolate'), require('d3-color'), require('d3-ease')) :
+typeof define === 'function' && define.amd ? define(['exports', 'd3-selection', 'd3-dispatch', 'd3-timer', 'd3-interpolate', 'd3-color', 'd3-ease'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}, global.d3, global.d3, global.d3, global.d3, global.d3, global.d3));
+}(this, function (exports, d3Selection, d3Dispatch, d3Timer, d3Interpolate, d3Color, d3Ease) { 'use strict';
+>>>>>>> integrate-wordcloud
 
   albersUsa.stream = function(stream) {
     return cache && cacheStream === stream ? cache : cache = multiplex([lower48.stream(cacheStream = stream), alaska.stream(stream), hawaii.stream(stream)]);
@@ -18119,8 +19818,18 @@ function conicProjection(projectAt) {
     return arguments.length ? m(phi0 = _[0] * radians, phi1 = _[1] * radians) : [phi0 * degrees, phi1 * degrees];
   };
 
+<<<<<<< HEAD
   return p;
 }
+=======
+},{"d3-color":11,"d3-dispatch":13,"d3-ease":16,"d3-interpolate":22,"d3-selection":29,"d3-timer":33}],35:[function(require,module,exports){
+// https://d3js.org/d3-voronoi/ v1.1.4 Copyright 2018 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+typeof define === 'function' && define.amd ? define(['exports'], factory) :
+(factory((global.d3 = global.d3 || {})));
+}(this, (function (exports) { 'use strict';
+>>>>>>> integrate-wordcloud
 
 function cylindricalEqualAreaRaw(phi0) {
   var cosPhi0 = cos(phi0);
@@ -19000,6 +20709,7 @@ function equalEarthRaw(lambda, phi) {
   ];
 }
 
+<<<<<<< HEAD
 equalEarthRaw.invert = function(x, y) {
   var l = y, l2 = l * l, l6 = l2 * l2 * l2;
   for (var i = 0, delta, fy, fpy; i < iterations; ++i) {
@@ -19013,6 +20723,15 @@ equalEarthRaw.invert = function(x, y) {
     asin(sin(l) / M)
   ];
 };
+=======
+},{}],36:[function(require,module,exports){
+// https://d3js.org/d3-zoom/ v1.8.3 Copyright 2019 Mike Bostock
+(function (global, factory) {
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('d3-dispatch'), require('d3-drag'), require('d3-interpolate'), require('d3-selection'), require('d3-transition')) :
+typeof define === 'function' && define.amd ? define(['exports', 'd3-dispatch', 'd3-drag', 'd3-interpolate', 'd3-selection', 'd3-transition'], factory) :
+(global = global || self, factory(global.d3 = global.d3 || {}, global.d3, global.d3, global.d3, global.d3, global.d3));
+}(this, function (exports, d3Dispatch, d3Drag, d3Interpolate, d3Selection, d3Transition) { 'use strict';
+>>>>>>> integrate-wordcloud
 
 function equalEarth() {
   return projection(equalEarthRaw)
@@ -19502,8 +21221,13 @@ function stratify() {
     return arguments.length ? (parentId = required(x), stratify) : parentId;
   };
 
+<<<<<<< HEAD
   return stratify;
 }
+=======
+},{"d3-dispatch":13,"d3-drag":14,"d3-interpolate":22,"d3-selection":29,"d3-transition":34}],37:[function(require,module,exports){
+'use strict';
+>>>>>>> integrate-wordcloud
 
 function defaultSeparation$1(a, b) {
   return a.parent === b.parent ? 1 : 2;
@@ -19522,6 +21246,7 @@ function nextLeft(v) {
   return children ? children[0] : v.t;
 }
 
+<<<<<<< HEAD
 // This function works analogously to nextLeft.
 function nextRight(v) {
   var children = v.children;
@@ -43873,6 +45598,8 @@ var d3Zoom = require('d3-zoom');
 
 var version = "5.16.0";
 
+=======
+>>>>>>> integrate-wordcloud
 Object.keys(d3Array).forEach(function (k) {
 	if (k !== 'default') Object.defineProperty(exports, k, {
 		enumerable: true,
@@ -44124,7 +45851,11 @@ Object.keys(d3Zoom).forEach(function (k) {
 exports.version = version;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 },{"d3-array":6,"d3-axis":7,"d3-brush":8,"d3-chord":9,"d3-collection":11,"d3-color":12,"d3-contour":13,"d3-dispatch":14,"d3-drag":15,"d3-dsv":16,"d3-ease":17,"d3-fetch":18,"d3-force":19,"d3-format":20,"d3-geo":21,"d3-hierarchy":22,"d3-interpolate":23,"d3-path":24,"d3-polygon":25,"d3-quadtree":26,"d3-random":27,"d3-scale":29,"d3-scale-chromatic":28,"d3-selection":30,"d3-shape":31,"d3-time":33,"d3-time-format":32,"d3-timer":34,"d3-transition":35,"d3-voronoi":36,"d3-zoom":37}]},{},[2]);
 =======
 },{"d3-array":7,"d3-axis":8,"d3-brush":9,"d3-chord":10,"d3-collection":12,"d3-color":13,"d3-contour":14,"d3-dispatch":15,"d3-drag":16,"d3-dsv":17,"d3-ease":18,"d3-fetch":19,"d3-force":20,"d3-format":21,"d3-geo":22,"d3-hierarchy":23,"d3-interpolate":24,"d3-path":25,"d3-polygon":26,"d3-quadtree":27,"d3-random":28,"d3-scale":30,"d3-scale-chromatic":29,"d3-selection":31,"d3-shape":32,"d3-time":40,"d3-time-format":39,"d3-timer":41,"d3-transition":42,"d3-voronoi":43,"d3-zoom":44}]},{},[2]);
 >>>>>>> 28e85b5a5276ff671af6daa679f73bada41c9a8f
+=======
+},{"d3-array":5,"d3-axis":6,"d3-brush":7,"d3-chord":8,"d3-collection":10,"d3-color":11,"d3-contour":12,"d3-dispatch":13,"d3-drag":14,"d3-dsv":15,"d3-ease":16,"d3-fetch":17,"d3-force":18,"d3-format":19,"d3-geo":20,"d3-hierarchy":21,"d3-interpolate":22,"d3-path":23,"d3-polygon":24,"d3-quadtree":25,"d3-random":26,"d3-scale":28,"d3-scale-chromatic":27,"d3-selection":29,"d3-shape":30,"d3-time":32,"d3-time-format":31,"d3-timer":33,"d3-transition":34,"d3-voronoi":35,"d3-zoom":36}]},{},[2]);
+>>>>>>> integrate-wordcloud
