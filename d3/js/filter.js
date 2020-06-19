@@ -5,6 +5,7 @@
 //import top10 from "./top10_movies.js";
 
 var top10 = require("./top10_movies.js");
+var map = require("./map.js")
 var scatter = require("./scatter.js")
 
 var d3 = require("d3")
@@ -497,6 +498,7 @@ function filterdata(data){
         brush()
       }  
       top10.change(selected)
+      map.change(selected)
       scatter.change(selected)
   }
 
