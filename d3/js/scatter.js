@@ -106,7 +106,6 @@ mouseout = function(d){
 // create tooltips
 var tooltip = d3.select("body")
     .append("div")  
-    .attr("class", "tooltip")
     .style('position','absolute')
     .style("opacity", 0)
     .style("background-color", "lightsteelblue")

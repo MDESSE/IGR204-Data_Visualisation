@@ -5,7 +5,6 @@ let color_scale
 
 var tooltip = d3.select("body")
 .append("div")  
-.attr("class", "tooltip")
 .style('position','absolute')
 .style("opacity", 0)
 .style("background-color", "lightsteelblue")
@@ -19,7 +18,7 @@ var mouseover = function(d, country_count){
     .duration(200)    
     .style("opacity", 1);
 
-    tooltip .html("Name: " + d["properties"]["name"] + "<br/>Number of movies: " + country_count[d["properties"]["name"]])
+    tooltip.html("<p>Name: " + d["properties"]["name"] + "<br/>Number of movies: " + country_count[d["properties"]["name"]] + "</p>")
     .style("left", (d3.event.pageX + 10) + "px")
     .style("top", (d3.event.pageY - 15) + "px")
 
@@ -34,6 +33,7 @@ var mouseout = function(d){
 function map(data){
     var [country_count, country_max] = count_country(data)
 
+    console.log(data)
     color_scale = d3.scaleLog()
         .domain([1, country_max])
         .range([d3.interpolateYlGnBu(0), d3.interpolateYlGnBu(1)])

@@ -11,6 +11,31 @@ var wordcloud = require("./wordcloud.js");
 
 var d3 = require("d3")
 
+var colors = {
+  "Action": [185,56,73],
+  "Adventure": [37,50,75],
+  "Fantasy": [325,50,39],
+  "Science Fiction": [10,28,67],
+  "Crime": [271,39,57],
+  "Drama": [56,58,73],
+  "Thriller": [28,100,52],
+  "Animation": [41,75,61],
+  "Family": [60,86,61],
+  "Western": [30,100,73],
+  "Comedy": [318,65,67],
+  "Romance": [274,30,76],
+  "Horror": [20,49,49],
+  "Mystery": [334,80,84],
+  "History": [185,80,45],
+  "War": [10,30,42],
+  "Music": [339,60,49],
+  "Documentary": [359,69,49],
+  "Foreign": [204,70,41],
+  "TV Movie": [1,100,79],
+  "unknown": [1,100,79],
+  "": [1,100,79]
+};
+
 function filterdata(data){
 
   var width = document.body.clientWidth,
@@ -35,29 +60,7 @@ function filterdata(data){
       brush_count = 0,
       excluded_groups = [];
 
-  var colors = {
-      "Action": [185,56,73],
-      "Adventure": [37,50,75],
-      "Fantasy": [325,50,39],
-      "Science Fiction": [10,28,67],
-      "Crime": [271,39,57],
-      "Drama": [56,58,73],
-      "Thriller": [28,100,52],
-      "Animation": [41,75,61],
-      "Family": [60,86,61],
-      "Western": [30,100,73],
-      "Comedy": [318,65,67],
-      "Romance": [274,30,76],
-      "Horror": [20,49,49],
-      "Mystery": [334,80,84],
-      "History": [185,80,45],
-      "War": [10,30,42],
-      "Music": [339,60,49],
-      "Documentary": [359,69,49],
-      "Foreign": [204,70,41],
-      "TV Movie": [1,100,79],
-      "unknown": [1,100,79]
-  };
+
 
   // Scale chart and canvas height
   d3.select("#filter")
@@ -374,6 +377,10 @@ function filterdata(data){
 
   function color(d,a) {
     var c = colors[d];
+    if (typeof(c) == 'undefined') {
+      console.log(d)
+      console.log(colors[d])
+    }
     return ["hsla(",c[0],",",c[1],"%,",c[2],"%,",a,")"].join("");
   }
 
