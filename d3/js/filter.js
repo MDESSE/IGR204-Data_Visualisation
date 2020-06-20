@@ -7,6 +7,7 @@
 var top10 = require("./top10_movies.js");
 var map = require("./map.js")
 var scatter = require("./scatter.js")
+var wordcloud = require("./wordcloud.js");
 
 var d3 = require("d3")
 
@@ -500,6 +501,7 @@ function filterdata(data){
       top10.change(selected)
       map.change(selected)
       scatter.change(selected)
+      wordcloud.change(selected)
   }
 
   // render a set of polylines on a canvas
