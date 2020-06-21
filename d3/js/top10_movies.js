@@ -185,8 +185,7 @@ function top10(data){
 
 function change(data) {
 
-  var selectValue = d3.select('select').property('value');
-  i = selectValue
+  var selectValue = d3.select('#label-option').property('value');
   //update topData
 
   var remake
@@ -233,11 +232,11 @@ function change(data) {
   .style("text-anchor", "end");
 
   
-  console.log(d3.event, d3.event.target == d3.select('#label-option')._groups[0][0], d3.select('#label-option')._groups[0][0])
+  // console.log(d3.event, d3.event.target == d3.select('#label-option')._groups[0][0], d3.select('#label-option')._groups[0][0])
 
   var event_is_select = d3.event.target == d3.select('#label-option')._groups[0][0]
-  console.log(event_is_select)
-  if (remake & event_is_select == false){
+  // console.log(event_is_select)
+  if (remake){
     console.log(event_is_select)
     var bar = svg.selectAll('.bar')
     bar.remove()
@@ -285,9 +284,9 @@ function change(data) {
   textlabel.exit().remove()
 
   textlabel.transition().duration(300)
-    .attr("x", d => x(d[i]) - 4)
+    .attr("x", d => x(d[selectValue]) - 4)
     .attr("y", d => y(d.name) + y.bandwidth() / 2+10)
-    .text(d => format(d[i]));
+    .text(d => format(d[selectValue]));
 
 }
 
