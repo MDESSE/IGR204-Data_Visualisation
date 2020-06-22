@@ -177,8 +177,8 @@ yaxislabel = svg.append("text")
     .on("mouseleave", hideTooltip )
     */
 
-  d3.select("#X_axis_selector").on("change", () => change_scatter(data));
-  d3.select("#Y_axis_selector").on("change", () => change_scatter(data));
+  d3.select("#X_axis_scatter").on("change", () => change(data));
+  d3.select("#Y_axis_scatter").on("change", () => change(data));
 
 }
 
