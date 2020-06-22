@@ -5,10 +5,10 @@ var d3 = require("d3")
 var map = require("./map.js")
 var scatter = require("./scatter.js");
 
-var data;
+var data; 
 
 d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies_clean.csv").then(function(raw_data) {
-    // Convert quantitative scales to floats
+    // Convert quantitSative scales to floats
 
     data = raw_data.map(function(d) {
       try{
