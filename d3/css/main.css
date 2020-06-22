@@ -27,7 +27,7 @@ a {
 }
 svg {
   font-family: Ubuntu, Tahoma, Helvetica, sans-serif;
-  margin: auto auto;
+  margin: auto ;
   display: block;
 }
 canvas, svg {

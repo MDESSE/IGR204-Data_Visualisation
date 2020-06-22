@@ -6,6 +6,9 @@
     <link rel="stylesheet" type="text/css" href="d3/css/map.css" />
     <link rel="stylesheet" type="text/css" href="d3/css/main.css" />
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
   </head>
   <body>
 <!--
@@ -28,15 +31,13 @@
       </div>
     </div>
   -->
-
-    <!--NavBar-->
-    <nav class="navbar fixed-top navbar-expand-lg navbar-light" style="background-color: #1D3557; color: white;">
-      <a class="navbar-brand" href="#">Movie Explorer</a>
-      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo02" aria-controls="navbarTogglerDemo02" aria-expanded="false" aria-label="Toggle navigation">
+  <!--NavBar-->
+    <nav class="navbar fixed-top navbar-expand-lg navbar-dark mb-5 " style="background-color: #1D3557;">
+      <a class="navbar-brand" href="#"><b>Movie Explorer</b></a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo02" aria-controls="navbarTogglerDemo02" aria-expanded="false" ar    ia-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
-    
-      <div class="collapse navbar-collapse" id="navbarTogglerDemo02">
+       <div class="collapse navbar-collapse" id="navbarTogglerDemo02">
         <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
           <li class="nav-item active">
             <a class="nav-link" id="dark-theme" href="#">Dark <span class="sr-only">(current)</span></a>
@@ -45,50 +46,28 @@
             <a class="nav-link" id="light-theme" disabled="disabled" href="#">Light</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link disabled" href="#">Disabled</a>
+            <a class="nav-link" id="light-theme" href="#" id="hide-ticks" >Hide</a>
           </li>
         </ul>
-        <form class="form-inline my-2 my-lg-0">
-          <input class="form-control mr-sm-2" type="search" placeholder="Search">
-          <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-        </form>
       </div>
     </nav>
-
-
-    <!-- FILTER -->
-  <div class="d-flex justify-content-center flex-column shadow-lg p-3 rounded my-2 col" id="main">  
-  <div class="legend d-flex mx-4 my-0 justify-content-center"> <h2 class="display-3"><b>Follow our instinct : </b></h2></div>
-    <div class='chart shadow-lg p-3 m-4 rounded my-3 p-2' id="filter">
+   <!-- FILTER -->
+  <div class="d-flex justify-content-center flex-column shadow-lg p-3 rounded col" id="main">  
+  <div class="legend d-flex mx-4 mt-5 justify-content-center"> <h2 class="display-3"><b>Follow our instinct : </b></h2></div>
+    <div class='chart shadow-lg p-3 mx-4 rounded  p-2' id="filter">
       <canvas id="background"></canvas>
       <canvas id="foreground"></canvas>
       <canvas id="highlight"></canvas>
       <svg></svg>
     </div>
 
-    <!-- Example single danger button -->
-    <div class="btn-group">
-      <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
-        aria-expanded="false">
-        Action
-      </button>
-      <div class="dropdown-menu">
-        <a class="dropdown-item" href="#">Action</a>
-        <a class="dropdown-item" href="#">Another action</a>
-        <a class="dropdown-item" href="#">Something else here</a>
-        <div class="dropdown-divider"></div>
-        <a class="dropdown-item" href="#">Separated link</a>
-      </div>
-    </div>
-     
-    <!-- SCATTERPLOT -->
 
 
-    <div class="legend d-flex mx-4 my-0 justify-content-center"> <h2 class="display-4"><b>Scatter legend : </b></h2></div>
-    <div class="d-flex m-2 justify-content-center flex-row"> 
+    <div class="legend d-flex mx-4 mt-5 justify-content-center"> <h2 class="display-4"><b>Popularity scatter </b></h2></div>
+    <div class="d-flex m-1 justify-content-center flex-row"> 
       <div class="p-2">
         <p>X axis : 
-          <select id="X_axis_scatter">
+          <select id="X_axis_scatter" class="btn btn-outline-info">
             <option value="revenue" selected="selected">Revenue</option>
             <option value="budget">Budget</option>
             <option value="vote_average">Vote average</option>
@@ -98,7 +77,7 @@
       </div>
       <div class="p-2">
         <p>Y axis :
-          <select id="Y_axis_scatter">
+          <select id="Y_axis_scatter" class="btn btn-outline-info">
             <option value="revenue" >Revenue</option>
             <option value="budget" selected = "selected">Budget</option>
             <option value="vote_average">Vote average</option>
@@ -110,11 +89,11 @@
       <div class='chart shadow-lg p-3 m-4 rounded my-3 p-2' id = scatter_plot style="height: 500px"></div>
 
       <!-- TOP10 -->
-    <div class="legend d-flex mx-4 my-0 justify-content-center"> <h2 class="display-4"><b>TOP10 legend : </b></h2></div>  
+    <div class="legend d-flex mx-4 my-0 justify-content-center"> <h2 class="display-4"><b>TOP 10</b></h2></div>  
     <div class="d-flex m-2 justify-content-center flex-row">   
       <div class="p-2 bd-highlight">
         <p>Criteria:
-          <select id="label-option">
+          <select id="label-option" class="btn btn-outline-info">
             <option value="revenue" selected = "selected">Revenue</option>
             <option value="budget">budget</option>
             <option value="vote_average">vote_average</option>
@@ -130,13 +109,13 @@
       </div>
 
       <!-- WORDCLOUD -->
-      <div class="legend d-flex mx-4 my-0 justify-content-center"> <h2 class="display-4"><b>Wordcloud legend : </b></h2></div>
+      <div class="legend d-flex mx-4 my-4 justify-content-center"> <h2 class="display-4"><b>Most recurrent themes</b></h2></div>
       <div class="shadow-lg p-3 m-4 rounded my-3 p-2" style="height: 500px ">
         <div class='mx-2 chart' id="wordcloud" ></div>
       </div>
      
       <!-- MAP -->
-      <div class="legend d-flex mx-4 my-0 justify-content-center "> <h2 class="display-4"><b>MAP legend : </b></h2></div>
+      <div class="legend d-flex mx-4 my-0 justify-content-center "> <h2 class="display-4"><b>Map of producers</b></h2></div>
       <div class="shadow-lg p-3 m-4 rounded my-3 p-2 " style="height: 500px">
           <div class="chart align-content-center" id="map"></div>
       </div>
