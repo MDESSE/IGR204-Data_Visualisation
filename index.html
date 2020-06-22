@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
   </head>
   <body>
-
+<!--
     <div id="header">
       <h1>Movie Explorer</h1>
       <button title="Zoom in on selected data" id="keep-data" disabled="disabled">Keep</button>
@@ -16,6 +16,7 @@
       <button title="Export data as CSV" id="export-data">Export</button>
       <div class="controls">
         <strong id="rendered-count"></strong>/<strong id="selected-count"></strong><!--<strong id="data-count"></strong>-->
+        <!--
         <div class="fillbar"><div id="selected-bar"><div id="rendered-bar">&nbsp;</div></div></div>
         Lines at <strong id="opacity"></strong> opacity.
         <span class="settings">
@@ -26,9 +27,37 @@
         </span>
       </div>
     </div>
+  -->
+
+    <!--NavBar-->
+    <nav class="navbar fixed-top navbar-expand-lg navbar-light" style="background-color: #1D3557; color: white;">
+      <a class="navbar-brand" href="#">Movie Explorer</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo02" aria-controls="navbarTogglerDemo02" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+    
+      <div class="collapse navbar-collapse" id="navbarTogglerDemo02">
+        <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
+          <li class="nav-item active">
+            <a class="nav-link" id="dark-theme" href="#">Dark <span class="sr-only">(current)</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="light-theme" disabled="disabled" href="#">Light</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link disabled" href="#">Disabled</a>
+          </li>
+        </ul>
+        <form class="form-inline my-2 my-lg-0">
+          <input class="form-control mr-sm-2" type="search" placeholder="Search">
+          <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+        </form>
+      </div>
+    </nav>
+
 
     <!-- FILTER -->
-  <div class="d-flex justify-content-center flex-column shadow-lg p-3 rounded my-2" id="main">  
+  <div class="d-flex justify-content-center flex-column shadow-lg p-3 rounded my-2 col" id="main">  
   <div class="legend d-flex mx-4 my-0 justify-content-center"> <h2 class="display-3"><b>Follow our instinct : </b></h2></div>
     <div class='chart shadow-lg p-3 m-4 rounded my-3 p-2' id="filter">
       <canvas id="background"></canvas>

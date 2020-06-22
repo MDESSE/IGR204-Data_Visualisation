@@ -267,6 +267,11 @@ button#exclude-data:hover {
   line-height: 24px;
 }
 
+.navbar-default {
+  background-color:#1D3557;
+  color: white;
+}
+
 /* Scrollbars */
 
 ::-webkit-scrollbar {
