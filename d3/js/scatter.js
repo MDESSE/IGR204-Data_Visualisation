@@ -129,7 +129,7 @@ function scatter(data){
   // Add X axis
   x = d3.scaleLinear()
     .domain([d3.min(topData, function(d) { return d[i] ;} ), d3.max(topData, function(d) { return d[i] ;} )])
-    .range([0, width]);
+    .range([0, width - margin.right - margin.left]);
   
   // Add Y axis
   y = d3.scaleLinear()
@@ -145,7 +145,7 @@ function scatter(data){
   
 xaxislabel = svg.append("text")
   .attr("text-anchor", "end")
-  .attr("x", width)
+  .attr("x", width - margin.right - margin.left)
   .attr("y", height + margin.top)
   .text(i);
 
