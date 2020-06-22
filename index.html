@@ -31,10 +31,18 @@
       </div>
     </div>
   -->
+<<<<<<< HEAD
   <!--NavBar-->
     <nav class="navbar fixed-top navbar-expand-lg navbar-dark mb-5 " style="background-color: #1D3557;">
       <a class="navbar-brand" href="#"><b>Movie Explorer</b></a>
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo02" aria-controls="navbarTogglerDemo02" aria-expanded="false" ar    ia-label="Toggle navigation">
+=======
+
+    <!--NavBar-->
+    <nav class="navbar fixed-top navbar-expand-lg navbar-dark" style="background-color: #1D3557;">
+      <a class="navbar-brand" href="#">Movie Explorer</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo02" aria-controls="navbarTogglerDemo02" aria-expanded="false" aria-label="Toggle navigation">
+>>>>>>> 681145a8764c1d9ce1cacc0aceba39503740851f
         <span class="navbar-toggler-icon"></span>
       </button>
        <div class="collapse navbar-collapse" id="navbarTogglerDemo02">
@@ -46,25 +54,57 @@
             <a class="nav-link" id="light-theme" disabled="disabled" href="#">Light</a>
           </li>
           <li class="nav-item">
+<<<<<<< HEAD
             <a class="nav-link" id="light-theme" href="#" id="hide-ticks" >Hide</a>
+=======
+            <a class="nav-link" id="light-theme" href="#" title="Zoom in on selected data" id="keep-data" disabled="disabled">Keep</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="light-theme" href="#" title="Remove selected data" id="exclude-data" disabled="disabled">Exclude</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="light-theme" href="#" title="Export data as CSV" id="export-data">Export</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="light-theme" href="#" id="hide-ticks" >Hide</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="light-theme" href="#" id="show-ticks" disabled="disabled" >Show Ticks</a>
+>>>>>>> 681145a8764c1d9ce1cacc0aceba39503740851f
           </li>
         </ul>
       </div>
     </nav>
+<<<<<<< HEAD
    <!-- FILTER -->
   <div class="d-flex justify-content-center flex-column shadow-lg p-3 rounded col" id="main">  
   <div class="legend d-flex mx-4 mt-5 justify-content-center"> <h2 class="display-3"><b>Follow our instinct : </b></h2></div>
     <div class='chart shadow-lg p-3 mx-4 rounded  p-2' id="filter">
+=======
+
+
+    <!-- FILTER -->
+  <div class="d-flex justify-content-center flex-column shadow-lg p-3 rounded my-2 col" id="main">  
+  <div class="legend d-flex mx-4 mt-5 justify-content-center"> <h2 class="display-3"><b>Follow our instinct : </b></h2></div>
+    <div class='chart shadow-lg p-3 m-4 rounded my-3 p-2' id="filter">
+>>>>>>> 681145a8764c1d9ce1cacc0aceba39503740851f
       <canvas id="background"></canvas>
       <canvas id="foreground"></canvas>
       <canvas id="highlight"></canvas>
       <svg></svg>
     </div>
+<<<<<<< HEAD
 
 
 
     <div class="legend d-flex mx-4 mt-5 justify-content-center"> <h2 class="display-4"><b>Popularity scatter </b></h2></div>
     <div class="d-flex m-1 justify-content-center flex-row"> 
+=======
+     
+    <!-- SCATTERPLOT -->
+    <div class="legend d-flex mx-4 my-0 justify-content-center"> <h2 class="display-4"><b>Scatter legend : </b></h2></div>
+    <div class="d-flex m-2 justify-content-center flex-row"> 
+>>>>>>> 681145a8764c1d9ce1cacc0aceba39503740851f
       <div class="p-2">
         <p>X axis : 
           <select id="X_axis_scatter" class="btn btn-outline-info">
@@ -85,15 +125,32 @@
           </select>
         </p>
       </div>
+
     </div>
       <div class='chart shadow-lg p-3 m-4 rounded my-3 p-2' id = scatter_plot style="height: 500px"></div>
+  </div>
 
+
+
+   
+    <!-- MAP -->
+    <div class="legend d-flex mx-4 my-0 justify-content-center "> <h2 class="display-4"><b>MAP legend : </b></h2></div>
+    <div class="shadow-lg p-3 m-4 rounded my-3 p-2 " style="height: 500px">
+        <div class="chart align-content-center" id="map"></div>
+    </div>  
+
+  </div>
+  </div>  
       <!-- TOP10 -->
     <div class="legend d-flex mx-4 my-0 justify-content-center"> <h2 class="display-4"><b>TOP 10</b></h2></div>  
     <div class="d-flex m-2 justify-content-center flex-row">   
       <div class="p-2 bd-highlight">
         <p>Criteria:
+<<<<<<< HEAD
           <select id="label-option" class="btn btn-outline-info">
+=======
+          <select id="label-option class="btn btn-outline-info">
+>>>>>>> 681145a8764c1d9ce1cacc0aceba39503740851f
             <option value="revenue" selected = "selected">Revenue</option>
             <option value="budget">budget</option>
             <option value="vote_average">vote_average</option>
@@ -128,4 +185,7 @@
   <script src="d3/js/bundle.js" type="module"></script>
   <script src="https://d3js.org/queue.v1.min.js"></script>
   <script src="https://d3js.org/topojson.v1.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
 </html>
