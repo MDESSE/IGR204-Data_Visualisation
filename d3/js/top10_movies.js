@@ -101,7 +101,7 @@ function top10(data){
   initialGraph(data);
 
     //update graph based on selection from HTML dragdown
-  d3.select("#label-option").on("change", () => change(data));
+  //d3.select("#label-option").on("change", () => change(data));
 
   topData = data.slice(0, 20)
 
@@ -237,7 +237,7 @@ function change(data) {
   var event_is_select = d3.event.target == d3.select('#label-option')._groups[0][0]
   // console.log(event_is_select)
   if (remake){
-    console.log(event_is_select)
+
     var bar = svg.selectAll('.bar')
     bar.remove()
 

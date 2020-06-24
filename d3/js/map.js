@@ -33,7 +33,6 @@ var mouseout = function(d){
 function map(data){
     var [country_count, country_max] = count_country(data)
 
-    console.log(data)
     color_scale = d3.scaleLog()
         .domain([1, country_max])
         .range([d3.interpolateYlGnBu(0), d3.interpolateYlGnBu(1)])

@@ -12,10 +12,6 @@ d3.csv("./data/tmdb-movie-metadata/tmdb_5000_movies_clean.csv").then(function(ra
 
     data = raw_data.map(function(d) {
       try{
-        if (d["original_title"]=="Avatar") {
-          console.log(d)
-          console.log(d["genres"].split('-').flat()[0] ) //d["genres"].split('-').flat()[0]   eval(d["genres"])[0]['name']
-        }
         return {
           budget: parseFloat(d["budget"]), 
           revenue: parseFloat(d["revenue"]), 

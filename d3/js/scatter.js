@@ -34,8 +34,8 @@ var svg = d3.select("#scatter_plot")
     "translate(" + margin.left + "," + margin.top + ")");
 
 var rscale = d3.scaleLinear()
-  .domain([0, 100])
-  .range([1, 10]);
+  .domain([0, 1000])
+  .range([5, 50]);
 
 // Add a scale for bubble color
 var myColor = d3.scaleOrdinal()
@@ -177,8 +177,8 @@ yaxislabel = svg.append("text")
     .on("mouseleave", hideTooltip )
     */
 
-  d3.select("#X_axis_scatter").on("change", () => change(data));
-  d3.select("#Y_axis_scatter").on("change", () => change(data));
+  //d3.select("#X_axis_scatter").on("change", () => change(data));
+  //d3.select("#Y_axis_scatter").on("change", () => change(data));
 
 }
 
@@ -187,8 +187,6 @@ yaxislabel = svg.append("text")
 function change(data) {
   var selectValueX = d3.select('#X_axis_scatter').property('value');
   var selectValueY = d3.select('#Y_axis_scatter').property('value');
-
-  console.log(selectValueX, selectValueY)
 
   var i = selectValueX
   var j= selectValueY

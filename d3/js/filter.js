@@ -60,6 +60,11 @@ function filterdata(data){
       brush_count = 0,
       excluded_groups = [];
 
+  // change scatterplot selection
+  d3.select("#X_axis_scatter").on("change", () => scatter.change(selected));
+  d3.select("#Y_axis_scatter").on("change", () => scatter.change(selected));
+  // change top10 selection
+  d3.select("#label-option").on("change", () => top10.change(selected));
 
 
   // Scale chart and canvas height
@@ -377,10 +382,6 @@ function filterdata(data){
 
   function color(d,a) {
     var c = colors[d];
-    if (typeof(c) == 'undefined') {
-      console.log(d)
-      console.log(colors[d])
-    }
     return ["hsla(",c[0],",",c[1],"%,",c[2],"%,",a,")"].join("");
   }
 
@@ -614,7 +615,6 @@ function filterdata(data){
     var actives = [];
       if (brush_count != 1){
           for(var i=0;i<dimensions.length;++i){
-              console.log(extents, actives)
               if(d3.event.target==yscale[dimensions[i]].brush) {
                   actives.push(dimensions[i])
                   extents[i]=d3.event.selection.map(yscale[dimensions[i]].invert,yscale[dimensions[i]]);
