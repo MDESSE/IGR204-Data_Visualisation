@@ -39,7 +39,7 @@ var colors = {
 function filterdata(data){
 
   var width = document.body.clientWidth,
-      height = d3.max([document.body.clientHeight-540, 240]);
+      height = document.body.clientHeight/3
 
   var m = [60, 100, 10, 100],
       w = width - m[1] - m[3],
@@ -656,7 +656,7 @@ function filterdata(data){
   // scale to window size
   window.onresize = function() {
     width = document.body.clientWidth,
-    height = d3.max([document.body.clientHeight-500, 220]);
+    height = document.body.clientHeight / 3;
 
     w = width - m[1] - m[3],
     h = height - m[0] - m[2];
